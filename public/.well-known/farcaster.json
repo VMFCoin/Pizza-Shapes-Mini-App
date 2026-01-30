@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9",
+    "payload": "eyJkb21haW4iOiJwaXp6YXNoYXBlcy5hcHAifQ",
+    "signature": "REPLACE_WITH_ACTUAL_SIGNATURE"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Pizza Shapes",
+    "iconUrl": "https://pizzashapes.app/icon.png",
+    "homeUrl": "https://pizzashapes.app",
+    "imageUrl": "https://pizzashapes.app/og-image.png",
+    "buttonTitle": "Play Now",
+    "splashImageUrl": "https://pizzashapes.app/splash.png",
+    "splashBackgroundColor": "#1A1A2E",
+    "webhookUrl": "https://pizzashapes.app/api/webhook"
+  }
+}

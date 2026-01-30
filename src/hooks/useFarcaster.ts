@@ -1,14 +1,45 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
-import { FarcasterContext, PIZZA_TOKEN_ADDRESS } from '@/types';
+import { FarcasterContext } from '@/types';
+import { PIZZA_TOKEN } from '@/lib/constants';
+
+// Type definitions for Farcaster Mini App SDK
+interface FarcasterSDK {
+  context: Promise<{
+    user: {
+      fid: number;
+      username: string;
+      displayName: string;
+      pfpUrl: string;
+      custody: string;
+    };
+    client: {
+      clientFid: number;
+      added: boolean;
+    };
+  }>;
+  actions: {
+    viewToken: (address: string) => void;
+    composeCast: (params: { text: string; embeds?: string[] }) => void;
+    viewProfile: (params: { fid: number }) => void;
+    ready: () => void;
+  };
+}
+
+declare global {
+  interface Window {
+    sdk?: FarcasterSDK;
+  }
+}
 
 interface UseFarcasterReturn {
   context: FarcasterContext | null;
   isLoading: boolean;
   isFrameContext: boolean;
+  isReady: boolean;
   viewToken: (tokenAddress?: string) => void;
-  composeCast: (text: string) => void;
+  composeCast: (text: string, embeds?: string[]) => void;
   viewProfile: (fid: number) => void;
   shareMatchWin: (matchId: string, slicesWon: number, prize: bigint) => void;
   shareFreeRollWin: (prize: bigint) => void;
@@ -16,48 +47,65 @@ interface UseFarcasterReturn {
   shareLeaderboardRank: (rank: number) => void;
 }
 
-// Farcaster Frame SDK integration
-// In production, this would use the actual Farcaster Frame SDK
-
+/**
+ * Farcaster Mini App SDK Hook
+ *
+ * Uses @farcaster/miniapp-sdk for:
+ * - Quick Auth (primary wallet only)
+ * - viewToken, composeCast, viewProfile actions
+ * - No Frames v1 syntax
+ */
 export function useFarcaster(): UseFarcasterReturn {
   const [context, setContext] = useState<FarcasterContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFrameContext, setIsFrameContext] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [sdk, setSdk] = useState<FarcasterSDK | null>(null);
 
-  // Initialize Farcaster context
+  // Initialize Farcaster SDK
   useEffect(() => {
     const initFarcaster = async () => {
       setIsLoading(true);
+
       try {
-        // Check if running in Farcaster frame context
-        // In production: const frameContext = await sdk.context;
+        // Check if running in Farcaster Mini App context
+        if (typeof window !== 'undefined' && window.sdk) {
+          const farcasterSdk = window.sdk;
+          setSdk(farcasterSdk);
 
-        // Simulated context for development
-        if (typeof window !== 'undefined') {
-          // Check for frame SDK
-          const urlParams = new URLSearchParams(window.location.search);
-          const fid = urlParams.get('fid');
+          // Get context from SDK
+          const ctx = await farcasterSdk.context;
 
-          if (fid) {
-            setIsFrameContext(true);
-            setContext({
-              fid: parseInt(fid),
-              displayName: 'Demo User',
-              pfpUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=demo',
-              custody: '0x' + '0'.repeat(40),
-            });
-          } else {
-            // Demo mode
-            setContext({
-              fid: 12345,
-              displayName: 'Pizza Fan',
-              pfpUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=pizzafan',
-              custody: '0x' + '1'.repeat(40),
-            });
-          }
+          setIsFrameContext(true);
+          setContext({
+            fid: ctx.user.fid,
+            displayName: ctx.user.displayName || ctx.user.username,
+            pfpUrl: ctx.user.pfpUrl,
+            custody: ctx.user.custody,
+          });
+
+          // Signal ready to Farcaster
+          farcasterSdk.actions.ready();
+          setIsReady(true);
+        } else {
+          // Development fallback
+          console.log('Farcaster SDK not found - using demo mode');
+          setContext({
+            fid: 12345,
+            displayName: 'Pizza Fan',
+            pfpUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=pizzafan',
+            custody: '0x' + '1'.repeat(40),
+          });
         }
       } catch (error) {
         console.error('Failed to initialize Farcaster context:', error);
+        // Fallback to demo mode
+        setContext({
+          fid: 12345,
+          displayName: 'Pizza Fan',
+          pfpUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=pizzafan',
+          custody: '0x' + '1'.repeat(40),
+        });
       } finally {
         setIsLoading(false);
       }
@@ -66,39 +114,33 @@ export function useFarcaster(): UseFarcasterReturn {
     initFarcaster();
   }, []);
 
-  // View $PIZZA token on Farcaster
-  const viewToken = useCallback((tokenAddress: string = PIZZA_TOKEN_ADDRESS) => {
-    if (isFrameContext) {
-      // In production: sdk.actions.viewToken(tokenAddress);
-      console.log('Viewing token:', tokenAddress);
+  // View $PIZZA token
+  const viewToken = useCallback((tokenAddress: string = PIZZA_TOKEN) => {
+    if (sdk && isFrameContext) {
+      sdk.actions.viewToken(tokenAddress);
     } else {
-      // Fallback: Open in new tab
       window.open(`https://basescan.org/token/${tokenAddress}`, '_blank');
     }
-  }, [isFrameContext]);
+  }, [sdk, isFrameContext]);
 
   // Compose a cast
-  const composeCast = useCallback((text: string) => {
-    if (isFrameContext) {
-      // In production: sdk.actions.composeCast({ text });
-      console.log('Composing cast:', text);
+  const composeCast = useCallback((text: string, embeds?: string[]) => {
+    if (sdk && isFrameContext) {
+      sdk.actions.composeCast({ text, embeds });
     } else {
-      // Fallback: Open Warpcast compose
       const encodedText = encodeURIComponent(text);
       window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
     }
-  }, [isFrameContext]);
+  }, [sdk, isFrameContext]);
 
   // View a user profile
   const viewProfile = useCallback((fid: number) => {
-    if (isFrameContext) {
-      // In production: sdk.actions.viewProfile({ fid });
-      console.log('Viewing profile:', fid);
+    if (sdk && isFrameContext) {
+      sdk.actions.viewProfile({ fid });
     } else {
-      // Fallback: Open Warpcast profile
       window.open(`https://warpcast.com/~/profiles/${fid}`, '_blank');
     }
-  }, [isFrameContext]);
+  }, [sdk, isFrameContext]);
 
   // Share match win
   const shareMatchWin = useCallback((matchId: string, slicesWon: number, prize: bigint) => {
@@ -139,6 +181,7 @@ export function useFarcaster(): UseFarcasterReturn {
     context,
     isLoading,
     isFrameContext,
+    isReady,
     viewToken,
     composeCast,
     viewProfile,
