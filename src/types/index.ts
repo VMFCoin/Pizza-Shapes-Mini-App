@@ -121,7 +121,7 @@ export interface PrizeDistribution {
   burned: bigint;        // 7%
   dailyFreeRoll: bigint; // 3%
   weeklyTop3: bigint;    // 10%
-  matchWinner: bigint;   // 67%
+  matchWinner: bigint;   // 77%
   weeklyJackpot: bigint; // remainder
 }
 

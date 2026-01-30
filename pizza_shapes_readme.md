@@ -75,7 +75,7 @@ Pizza Shapes is based on Dots and Boxes with a twist:
 - 7% → Burned permanently
 - 3% → Daily Free Roll Pool
 - 10% → Weekly Top 3 players (most slices captured)
-- 67% → Match winner
+- 77% → Match winner
 - Remainders → Weekly Jackpot
 
 ---
@@ -187,7 +187,7 @@ interface PlayerStats {
   - `enterMatch(matchId, amount)`
   - `settleMatch(matchId, winner, totalPool)`
   - `recordFreeRoll(fid, rollSelection, rolledNumber)`
-- **Prize Pool Distribution:** 3% charities, 7% burn, 3% daily free roll, 10% weekly top 3, 67% match winner
+- **Prize Pool Distribution:** 3% charities, 7% burn, 3% daily free roll, 10% weekly top 3, 77% match winner
 - **Stats Recorded Onchain:** games played, wins, slices captured, lifetime $PIZZA earnings, weekly slices
 
 ---

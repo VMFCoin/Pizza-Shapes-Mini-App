@@ -265,9 +265,9 @@ export default function GameOverPage() {
           <h3 className="font-semibold mb-3">Prize Distribution</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-400">🏆 Match Winner (67%)</span>
+              <span className="text-gray-400">🏆 Match Winner (77%)</span>
               <span className="text-game-secondary font-bold">
-                {formatPrize((demoResults.prize * BigInt(67)) / BigInt(100))} $PIZZA
+                {formatPrize((demoResults.prize * BigInt(77)) / BigInt(100))} $PIZZA
               </span>
             </div>
             <div className="flex justify-between">
@@ -277,6 +277,10 @@ export default function GameOverPage() {
             <div className="flex justify-between">
               <span className="text-gray-400">🔥 Burned (7%)</span>
               <span>{formatPrize((demoResults.prize * BigInt(7)) / BigInt(100))} $PIZZA</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">🎲 Daily Free Roll (3%)</span>
+              <span>{formatPrize((demoResults.prize * BigInt(3)) / BigInt(100))} $PIZZA</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">🎗️ Charities (3%)</span>

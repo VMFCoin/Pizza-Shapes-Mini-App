@@ -105,8 +105,8 @@ export function PrizeBreakdown({ entryAmount }: { entryAmount: number }) {
       <h4 className="text-sm font-semibold text-white mb-3">Prize Distribution</h4>
       <div className="space-y-2 text-xs">
         <div className="flex justify-between text-gray-300">
-          <span>🏆 Winner (67%)</span>
-          <span className="text-game-secondary">${calculatePrize(67)}</span>
+          <span>🏆 Winner (77%)</span>
+          <span className="text-game-secondary">${calculatePrize(77)}</span>
         </div>
         <div className="flex justify-between text-gray-300">
           <span>🎖️ Weekly Top 3 (10%)</span>
@@ -123,10 +123,6 @@ export function PrizeBreakdown({ entryAmount }: { entryAmount: number }) {
         <div className="flex justify-between text-gray-300">
           <span>🎗️ Charities (3%)</span>
           <span>${calculatePrize(3)}</span>
-        </div>
-        <div className="flex justify-between text-gray-300">
-          <span>💰 Weekly Jackpot (10%)</span>
-          <span>${calculatePrize(10)}</span>
         </div>
       </div>
     </div>

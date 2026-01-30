@@ -33,7 +33,7 @@ contract PizzaShapes is
     uint256 public constant BURN_PERCENTAGE = 700;          // 7%
     uint256 public constant FREE_ROLL_PERCENTAGE = 300;     // 3%
     uint256 public constant WEEKLY_TOP3_PERCENTAGE = 1000;  // 10%
-    uint256 public constant WINNER_PERCENTAGE = 6700;       // 67%
+    uint256 public constant WINNER_PERCENTAGE = 7700;       // 77%
     // Remainder goes to weekly jackpot                     // 10%
 
     // Entry tiers (in PIZZA tokens, 18 decimals)
