@@ -143,7 +143,7 @@ export interface FarcasterContext {
   fid: number;
   displayName: string;
   pfpUrl: string;
-  custody: string;
+  username?: string;
 }
 
 // Animation states
