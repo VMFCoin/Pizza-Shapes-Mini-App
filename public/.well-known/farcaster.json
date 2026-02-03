@@ -1,18 +1,18 @@
 {
   "accountAssociation": {
-    "header": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9",
-    "payload": "eyJkb21haW4iOiJwaXp6YXNoYXBlcy5hcHAifQ",
-    "signature": "REPLACE_WITH_ACTUAL_SIGNATURE"
+    "header": "eyJmaWQiOjAsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn0",
+    "payload": "eyJkb21haW4iOiJwaXp6YS1zaGFwZXMtbWluaS1hcHAudmVyY2VsLmFwcCJ9",
+    "signature": "PENDING_SIGNATURE"
   },
   "frame": {
     "version": "1",
     "name": "Pizza Dots",
-    "iconUrl": "https://pizzashapes.app/icon.png",
-    "homeUrl": "https://pizzashapes.app",
-    "imageUrl": "https://pizzashapes.app/og-image.png",
+    "iconUrl": "https://pizza-shapes-mini-app.vercel.app/icon.png",
+    "homeUrl": "https://pizza-shapes-mini-app.vercel.app",
+    "imageUrl": "https://pizza-shapes-mini-app.vercel.app/og-image.png",
     "buttonTitle": "Play Now",
-    "splashImageUrl": "https://pizzashapes.app/splash.png",
+    "splashImageUrl": "https://pizza-shapes-mini-app.vercel.app/splash.png",
     "splashBackgroundColor": "#1A1A2E",
-    "webhookUrl": "https://pizzashapes.app/api/webhook"
+    "webhookUrl": "https://pizza-shapes-mini-app.vercel.app/api/webhook"
   }
 }

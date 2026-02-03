@@ -4,14 +4,14 @@ import './globals.css';
 // Farcaster Mini App embed metadata
 const fcMiniApp = {
   version: "1",
-  imageUrl: "https://pizzashapes.app/og-image.png",
+  imageUrl: "https://pizza-shapes-mini-app.vercel.app/og-image.png",
   button: {
     title: "Play Now",
     action: {
       type: "launch_frame",
       name: "Pizza Dots",
-      url: "https://pizzashapes.app",
-      splashImageUrl: "https://pizzashapes.app/splash.png",
+      url: "https://pizza-shapes-mini-app.vercel.app",
+      splashImageUrl: "https://pizza-shapes-mini-app.vercel.app/splash.png",
       splashBackgroundColor: "#1A1A2E"
     }
   }
@@ -20,7 +20,7 @@ const fcMiniApp = {
 export const metadata: Metadata = {
   title: 'Pizza Dots - Dots & Boxes on Base',
   description: 'A multiplayer, turn-based strategy game. Capture pizza slices and earn $PIZZA rewards on Base mainnet.',
-  metadataBase: new URL('https://pizzashapes.app'),
+  metadataBase: new URL('https://pizza-shapes-mini-app.vercel.app'),
   openGraph: {
     title: 'Pizza Dots',
     description: 'Capture pizza slices and earn $PIZZA rewards!',
