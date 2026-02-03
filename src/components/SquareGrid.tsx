@@ -164,11 +164,26 @@ export function SquareGrid({
   }, [nodes, selectedNode, currentPlayerColor, handleNodeClick]);
 
   return (
-    <div className="relative">
+    <div
+      className="relative p-2 rounded-3xl"
+      style={{
+        background: 'linear-gradient(145deg, rgba(30, 30, 50, 0.95), rgba(20, 20, 35, 0.98))',
+        border: '3px solid rgba(78, 205, 196, 0.4)',
+        boxShadow: `
+          0 0 30px rgba(78, 205, 196, 0.2),
+          0 0 60px rgba(78, 205, 196, 0.1),
+          inset 0 0 30px rgba(0, 0, 0, 0.5),
+          0 10px 40px rgba(0, 0, 0, 0.6)
+        `,
+      }}
+    >
       <svg
         width={svgWidth}
         height={svgHeight}
-        className="bg-game-dark/50 rounded-2xl shadow-2xl"
+        className="rounded-2xl"
+        style={{
+          background: 'linear-gradient(180deg, rgba(26, 26, 46, 0.9), rgba(15, 15, 30, 0.95))',
+        }}
       >
         {/* Background grid pattern */}
         <defs>

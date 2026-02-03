@@ -8,3 +8,4 @@ export { PizzaLogo, PizzaShapesLogo } from './PizzaLogo';
 export { Confetti, Fireworks, CoinRain } from './Confetti';
 export { FreeRollModal } from './FreeRollModal';
 export { Background, AmusementParkBackground } from './Background';
+export { DotText, GlowText } from './DotText';

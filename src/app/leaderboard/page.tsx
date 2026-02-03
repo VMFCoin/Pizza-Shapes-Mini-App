@@ -39,12 +39,12 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <main className="min-h-screen relative">
+    <main className="min-h-[100svh] relative">
       <Background />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 p-4 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 p-4 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
+        <div className="flex items-center justify-between">
           <motion.button
             onClick={() => router.push('/')}
             className="p-2 rounded-lg bg-white/10"
@@ -58,61 +58,60 @@ export default function LeaderboardPage() {
       </header>
 
       {/* Main content */}
-      <div className="pt-24 pb-8 px-4 max-w-lg mx-auto">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          {(['weekly', 'lifetime'] as TabType[]).map((tab) => (
-            <motion.button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${
-                activeTab === tab
-                  ? 'bg-gradient-to-r from-game-primary to-game-secondary text-white'
-                  : 'bg-white/10 text-gray-400'
-              }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {tab === 'weekly' ? '📅 Weekly' : '🌟 All Time'}
-            </motion.button>
-          ))}
-        </div>
-
-        {/* Prize info */}
-        {activeTab === 'weekly' && (
-          <motion.div
-            className="card mb-6 text-center"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <p className="text-sm text-gray-400 mb-1">Weekly Prize Pool</p>
-            <p className="text-2xl font-bold text-game-secondary">10,000 $PIZZA</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Top 3 players share the prize!
-            </p>
-          </motion.div>
-        )}
-
-        {/* Loading state */}
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              className="text-4xl"
-            >
-              🍕
-            </motion.div>
+      <div className="pt-24 pb-8 px-4 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-lg mx-auto space-y-2">
+          {/* Tabs */}
+          <div className="flex gap-2">
+            {(['weekly', 'lifetime'] as TabType[]).map((tab) => (
+              <motion.button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${
+                  activeTab === tab
+                    ? 'bg-gradient-to-r from-game-primary to-game-secondary text-white'
+                    : 'bg-white/10 text-gray-400'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {tab === 'weekly' ? '📅 Weekly' : '🌟 All Time'}
+              </motion.button>
+            ))}
           </div>
-        ) : (
-          <AnimatePresence mode="wait">
+
+          {/* Prize info */}
+          {activeTab === 'weekly' && (
             <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-3"
+              className="card text-center"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
             >
+              <p className="text-sm text-gray-400 mb-1">Weekly Prize Pool</p>
+              <p className="text-2xl font-bold text-game-secondary">10,000 $PIZZA</p>
+              <p className="text-xs text-gray-400 mt-1">Top 3 players share the prize!</p>
+            </motion.div>
+          )}
+
+          {/* Loading state */}
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                className="text-4xl"
+              >
+                🍕
+              </motion.div>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-3"
+              >
               {/* Top 3 podium */}
               {currentData.length >= 3 && (
                 <div className="grid grid-cols-3 gap-2 mb-6">
@@ -260,18 +259,19 @@ export default function LeaderboardPage() {
                   </div>
                 </motion.div>
               )}
-            </motion.div>
-          </AnimatePresence>
-        )}
+              </motion.div>
+            </AnimatePresence>
+          )}
 
-        {/* Refresh button */}
-        <motion.button
-          onClick={refreshLeaderboard}
-          className="w-full mt-6 py-3 bg-white/5 rounded-xl text-gray-400 text-sm"
-          whileTap={{ scale: 0.98 }}
-        >
-          ↻ Refresh
-        </motion.button>
+          {/* Refresh button */}
+          <motion.button
+            onClick={refreshLeaderboard}
+            className="w-full py-3 bg-white/5 rounded-xl text-gray-400 text-sm"
+            whileTap={{ scale: 0.98 }}
+          >
+            ↻ Refresh
+          </motion.button>
+        </div>
       </div>
     </main>
   );

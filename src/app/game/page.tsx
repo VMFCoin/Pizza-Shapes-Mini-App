@@ -83,6 +83,16 @@ export default function GamePage() {
     }
   }, [isGameOver, winner, matchId, router]);
 
+  // Auto-end turn when no moves remaining (and in drawing phase)
+  useEffect(() => {
+    if (gameState && gamePhase === 'drawing' && gameState.movesRemaining === 0 && !isGameOver) {
+      const timer = setTimeout(() => {
+        endTurn();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, gamePhase, isGameOver, endTurn]);
+
   const handleRoll = useCallback(() => {
     if (gamePhase !== 'rolling') return;
 
@@ -114,15 +124,19 @@ export default function GamePage() {
       if (newStreak >= 5) {
         shareCaptureStreak(newStreak);
       }
+
+      // Extra turn granted - do NOT end turn
+      // The movesRemaining is already incremented in useGameState
     } else {
       setCaptureStreak(0);
+      // No capture - check if turn should end
+      // Note: movesRemaining is decremented in useGameState.drawEdge
+      // so we check if it was 1 before (now 0 after decrement)
     }
 
-    // Auto end turn if no moves remaining
-    if (gameState && gameState.movesRemaining <= 1 && !result.extraTurn) {
-      setTimeout(endTurn, 500);
-    }
-  }, [canDrawEdge, currentPlayer, drawEdge, captureStreak, shareCaptureStreak, gameState, endTurn]);
+    // Don't auto-end here - let the useGameState handle movesRemaining
+    // The player can continue if they have moves or got an extra turn
+  }, [canDrawEdge, currentPlayer, drawEdge, captureStreak, shareCaptureStreak]);
 
   const handleEndTurn = useCallback(() => {
     setCaptureStreak(0);
@@ -151,8 +165,8 @@ export default function GamePage() {
       <Background />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 p-3 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 p-3 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
+        <div className="flex items-center justify-between">
           <div className="text-sm">
             <span className="text-gray-400">Turn </span>
             <span className="font-bold text-white">{gameState.turnNumber}</span>
@@ -237,8 +251,8 @@ export default function GamePage() {
       </div>
 
       {/* Bottom controls */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
-        <div className="max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+        <div>
           {/* Dice roll phase */}
           {gamePhase === 'rolling' && isMyTurn && (
             <div className="flex flex-col items-center">

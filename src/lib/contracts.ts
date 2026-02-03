@@ -1,7 +1,7 @@
 import { PIZZA_TOKEN_ADDRESS } from '@/types';
 
 // Contract addresses (to be deployed)
-export const PIZZA_SHAPES_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Update after deployment
+export const PIZZA_DOTS_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Update after deployment
 
 // ERC20 ABI for $PIZZA token
 export const ERC20_ABI = [
@@ -44,8 +44,8 @@ export const ERC20_ABI = [
   },
 ] as const;
 
-// Pizza Shapes contract ABI
-export const PIZZA_SHAPES_ABI = [
+// Pizza Dots contract ABI
+export const PIZZA_DOTS_ABI = [
   // Entry tiers
   {
     inputs: [],
@@ -214,7 +214,7 @@ export function tierToAmount(tier: number): bigint {
 
 // Generate match ID from parameters
 export function generateMatchId(tier: number, timestamp: number): string {
-  const data = `pizza_shapes_${tier}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+  const data = `pizza_dots_${tier}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
   // In production, use proper keccak256 hashing
   return '0x' + Array.from(data).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(64, '0');
 }

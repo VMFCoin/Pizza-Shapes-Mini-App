@@ -4,11 +4,11 @@ pragma solidity ^0.8.20;
 import "./PizzaUUPSBase.sol";
 
 /**
- * @title PizzaShapesStats
- * @notice Authoritative onchain statistics for Pizza Shapes players
+ * @title PizzaDotsStats
+ * @notice Authoritative onchain statistics for Pizza Dots players
  * @dev UUPS upgradeable - stats are the source of truth
  */
-contract PizzaShapesStats is PizzaUUPSBase {
+contract PizzaDotsStats is PizzaUUPSBase {
     struct Stats {
         uint256 gamesPlayed;
         uint256 gamesWon;

@@ -1,5 +1,5 @@
 /**
- * Pizza Shapes - Phaser Game Scene
+ * Pizza Dots - Phaser Game Scene
  *
  * WebGL-powered game board for smooth animations and effects.
  * Can be used as an alternative to the SVG-based SquareGrid component.

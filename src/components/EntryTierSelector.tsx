@@ -75,9 +75,16 @@ function TierCard({
       {/* Tier amount */}
       <p className="text-2xl font-bold">{tier.label}</p>
 
-      {/* Description */}
+      {/* Board size */}
       <p className={`text-xs mt-1 ${isSelected ? 'text-white/80' : 'text-gray-400'}`}>
-        {tier.description}
+        {tier.gridSize}x{tier.gridSize} Board
+      </p>
+
+      {/* Player count */}
+      <p className={`text-xs ${isSelected ? 'text-white/60' : 'text-gray-500'}`}>
+        {tier.minPlayers === tier.maxPlayers
+          ? `${tier.maxPlayers} players`
+          : `${tier.minPlayers}-${tier.maxPlayers} players`}
       </p>
 
       {/* Selected indicator */}
@@ -101,7 +108,7 @@ export function PrizeBreakdown({ entryAmount }: { entryAmount: number }) {
   };
 
   return (
-    <div className="bg-white/5 rounded-xl p-4 mt-4">
+    <div className="bg-white/5 rounded-xl p-4">
       <h4 className="text-sm font-semibold text-white mb-3">Prize Distribution</h4>
       <div className="space-y-2 text-xs">
         <div className="flex justify-between text-gray-300">

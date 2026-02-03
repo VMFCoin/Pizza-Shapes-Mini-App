@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --game-primary: #FF6B35;
@@ -106,23 +104,63 @@ body {
 
 /* Button styles */
 .btn-primary {
-  @apply px-6 py-3 bg-gradient-to-r from-game-primary to-game-secondary rounded-xl font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(to right, var(--game-primary), var(--game-secondary));
+  border-radius: 0.75rem;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .btn-secondary {
-  @apply px-6 py-3 bg-white/10 rounded-xl font-semibold text-white hover:bg-white/20 transition-all duration-200;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  color: white;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Card styles */
 .card {
-  @apply bg-white/5 rounded-2xl p-4 backdrop-blur-sm border border-white/10;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Safe area for mobile */
 .safe-area-top {
-  padding-top: env(safe-area-inset-top);
+  /* Keep a baseline padding even when inset is 0 */
+  padding-top: calc(env(safe-area-inset-top) + 1rem);
 }
 
 .safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Keep a baseline padding even when inset is 0 */
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+
+/* Custom colors for Tailwind v4 */
+@theme {
+  --color-game-primary: #FF6B35;
+  --color-game-secondary: #F7C548;
+  --color-game-accent: #C41E3A;
+  --color-game-dark: #1A1A2E;
+  --color-game-light: #EAEAEA;
+  --color-pizza-crust: #D4A574;
+  --color-pizza-sauce: #C41E3A;
+  --color-pizza-cheese: #FFD700;
+  --color-pizza-pepperoni: #8B0000;
+  --color-pizza-olive: #2F4F2F;
+  --color-pizza-mushroom: #D2B48C;
 }

@@ -1,6 +1,6 @@
-# Pizza Shapes Mini App
+# Pizza Dots Mini App
 
-**Pizza Shapes** is a multiplayer, turn-based strategy game built as a Farcaster Mini App on Base mainnet. Inspired by Dots and Boxes, players create pizza slice shapes on a square grid to compete for onchain $PIZZA rewards.
+**Pizza Dots** is a multiplayer, turn-based strategy game built as a Farcaster Mini App on Base mainnet. Inspired by Dots and Boxes, players create pizza slice shapes on a square grid to compete for onchain $PIZZA rewards.
 
 Token Address: `0xa821f2ee19f4f62e404c934d43eb6e5763fbdb07`
 
@@ -18,7 +18,7 @@ Token Address: `0xa821f2ee19f4f62e404c934d43eb6e5763fbdb07`
 
 ## 2. Game Inspiration
 
-Pizza Shapes is based on Dots and Boxes with a twist:
+Pizza Dots is based on Dots and Boxes with a twist:
 - Players form pizza slice shapes (triangles) instead of squares
 - Diagonal lines are allowed
 - Any size pizza slice is valid
@@ -237,5 +237,5 @@ interface PlayerStats {
 
 ---
 
-**This README contains the complete blueprint for Pizza Shapes Mini App: UI, animations, Farcaster integrations, grid mechanics, TypeScript interfaces, and onchain $PIZZA contract logic.**
+**This README contains the complete blueprint for Pizza Dots Mini App: UI, animations, Farcaster integrations, grid mechanics, TypeScript interfaces, and onchain $PIZZA contract logic.**
 

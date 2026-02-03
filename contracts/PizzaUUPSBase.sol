@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 /**
  * @title PizzaUUPSBase
- * @notice Base contract for all Pizza Shapes UUPS upgradeable contracts
+ * @notice Base contract for all Pizza Dots UUPS upgradeable contracts
  * @dev Provides common role-based access control and upgrade authorization
  */
 abstract contract PizzaUUPSBase is

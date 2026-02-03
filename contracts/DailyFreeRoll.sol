@@ -6,7 +6,7 @@ import "./interfaces/IPizzaToken.sol";
 
 /**
  * @title DailyFreeRoll
- * @notice Daily free roll game for Pizza Shapes
+ * @notice Daily free roll game for Pizza Dots
  * @dev One roll per Farcaster FID per UTC day
  *
  * Mechanics:

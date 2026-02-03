@@ -1,5 +1,5 @@
 /**
- * Triangle Detection Algorithm for Pizza Shapes
+ * Triangle Detection Algorithm for Pizza Dots
  *
  * Detects newly formed triangles when an edge is added between two nodes.
  * Uses adjacency list for efficient lookup.

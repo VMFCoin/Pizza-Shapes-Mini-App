@@ -73,12 +73,15 @@ export interface EntryTier {
   amount: number;
   label: string;
   description: string;
+  gridSize: number;
+  minPlayers: number;
+  maxPlayers: number;
 }
 
 export const ENTRY_TIERS: EntryTier[] = [
-  { id: 1, amount: 0.25, label: '$0.25', description: 'Casual' },
-  { id: 2, amount: 0.50, label: '$0.50', description: 'Standard' },
-  { id: 3, amount: 1.00, label: '$1.00', description: 'High Stakes' },
+  { id: 1, amount: 0.25, label: '$0.25', description: '4x4 Beginner', gridSize: 4, minPlayers: 2, maxPlayers: 2 },
+  { id: 2, amount: 0.50, label: '$0.50', description: '6x6 Board', gridSize: 6, minPlayers: 1, maxPlayers: 4 },
+  { id: 3, amount: 1.00, label: '$1.00', description: '8x8 Board', gridSize: 8, minPlayers: 1, maxPlayers: 6 },
 ];
 
 // Match configuration

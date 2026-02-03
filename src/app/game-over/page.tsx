@@ -72,7 +72,7 @@ export default function GameOverPage() {
     if (isWinner) {
       shareMatchWin(matchId || '', demoResults.scores[winnerId || ''] || 0, demoResults.prize);
     } else {
-      composeCast(`Just played Pizza Shapes and captured ${demoResults.scores[`player_${context?.fid}`] || 0} slices! 🍕 Can you beat my score?`);
+      composeCast(`Just played Pizza Dots and captured ${demoResults.scores[`player_${context?.fid}`] || 0} slices! 🍕 Can you beat my score?`);
     }
     setHasShared(true);
   };
@@ -91,7 +91,7 @@ export default function GameOverPage() {
   );
 
   return (
-    <main className="min-h-screen relative overflow-hidden">
+    <main className="min-h-[100svh] relative overflow-hidden">
       <Background />
 
       {/* Celebration effects */}
@@ -104,7 +104,8 @@ export default function GameOverPage() {
       )}
 
       {/* Main content */}
-      <div className="pt-12 pb-32 px-4 max-w-lg mx-auto">
+      <div className="relative z-10 px-4 pt-12 pb-32 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-lg mx-auto space-y-2">
         {/* Result header */}
         <motion.div
           className="text-center mb-8"
@@ -147,7 +148,7 @@ export default function GameOverPage() {
 
         {/* Winner showcase */}
         <motion.div
-          className="card mb-6"
+          className="card"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
@@ -188,7 +189,7 @@ export default function GameOverPage() {
 
         {/* Final standings */}
         <motion.div
-          className="card mb-6"
+          className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -227,7 +228,7 @@ export default function GameOverPage() {
 
         {/* Match stats */}
         <motion.div
-          className="card mb-6"
+          className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -288,11 +289,12 @@ export default function GameOverPage() {
             </div>
           </div>
         </motion.div>
+        </div>
       </div>
 
       {/* Bottom actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
-        <div className="max-w-lg mx-auto space-y-3">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+        <div className="space-y-3">
           <motion.button
             onClick={handleShare}
             className={`w-full btn-primary ${hasShared ? 'opacity-50' : ''}`}

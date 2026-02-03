@@ -144,7 +144,7 @@ export function useFarcaster(): UseFarcasterReturn {
 
   // Share match win
   const shareMatchWin = useCallback((matchId: string, slicesWon: number, prize: bigint) => {
-    const text = `🍕 I just won a Pizza Shapes match!\n\n` +
+    const text = `🍕 I just won a Pizza Dots match!\n\n` +
       `📊 Slices captured: ${slicesWon}\n` +
       `💰 Prize: ${formatTokenAmount(prize)} $PIZZA\n\n` +
       `Play now and earn $PIZZA! 🎮`;
@@ -154,7 +154,7 @@ export function useFarcaster(): UseFarcasterReturn {
 
   // Share free roll win
   const shareFreeRollWin = useCallback((prize: bigint) => {
-    const text = `🎲 I just won the Pizza Shapes Daily Free Roll!\n\n` +
+    const text = `🎲 I just won the Pizza Dots Daily Free Roll!\n\n` +
       `💰 Won: ${formatTokenAmount(prize)} $PIZZA\n\n` +
       `Try your luck - it's free! 🍕`;
 
@@ -163,7 +163,7 @@ export function useFarcaster(): UseFarcasterReturn {
 
   // Share capture streak
   const shareCaptureStreak = useCallback((streak: number) => {
-    const text = `🔥 ${streak} slice capture streak in Pizza Shapes!\n\n` +
+    const text = `🔥 ${streak} slice capture streak in Pizza Dots!\n\n` +
       `Can you beat my streak? Play now! 🍕`;
 
     composeCast(text);
@@ -171,7 +171,7 @@ export function useFarcaster(): UseFarcasterReturn {
 
   // Share leaderboard rank
   const shareLeaderboardRank = useCallback((rank: number) => {
-    const text = `🏆 I'm ranked #${rank} on the Pizza Shapes leaderboard!\n\n` +
+    const text = `🏆 I'm ranked #${rank} on the Pizza Dots leaderboard!\n\n` +
       `Think you can beat me? 🍕`;
 
     composeCast(text);

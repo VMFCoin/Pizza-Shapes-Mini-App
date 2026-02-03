@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Pizza Shapes - Dots & Boxes on Base',
+  title: 'Pizza Dots - Dots & Boxes on Base',
   description: 'A multiplayer, turn-based strategy game. Capture pizza slices and earn $PIZZA rewards on Base mainnet.',
   openGraph: {
-    title: 'Pizza Shapes',
+    title: 'Pizza Dots',
     description: 'Capture pizza slices and earn $PIZZA rewards!',
     images: ['/og-image.png'],
   },
@@ -18,8 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-game-dark text-white antialiased">
-        {children}
+      <body className="min-h-screen bg-game-dark text-white antialiased flex flex-col items-center">
+        <div className="w-full max-w-lg mx-auto">
+          {children}
+        </div>
       </body>
     </html>
   );
