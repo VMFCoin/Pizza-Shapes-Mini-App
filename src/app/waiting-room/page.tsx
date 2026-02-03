@@ -69,7 +69,7 @@ function WaitingRoomContent() {
       <Background />
 
       {/* Header */}
-      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 p-4 safe-area-top">
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-2 pt-4 safe-area-top">
         <div className="flex items-center justify-between">
           <PizzaShapesLogo />
           <WalletDisplayCompact balance={balance} onViewToken={() => viewToken()} />
@@ -77,8 +77,8 @@ function WaitingRoomContent() {
       </header>
 
       {/* Main content */}
-      <div className="pt-24 pb-32 px-4 min-h-[100svh] flex flex-col justify-center">
-        <div className="w-full max-w-lg mx-auto space-y-2">
+      <div className="pt-24 pb-32 px-2 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-md mx-auto space-y-2">
           {/* Status card */}
           <motion.div
             className="card text-center"
@@ -200,7 +200,7 @@ function WaitingRoomContent() {
       </div>
 
       {/* Bottom action bar */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-2 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
         <div>
           <motion.button
             onClick={handleLeave}

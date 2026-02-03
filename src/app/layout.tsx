@@ -38,8 +38,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-game-dark text-white antialiased flex flex-col items-center">
-        <div className="w-full max-w-lg mx-auto">
+      <body className="min-h-screen bg-game-dark text-white antialiased flex flex-col items-center px-2">
+        <div className="w-full max-w-md mx-auto">
           {children}
         </div>
       </body>

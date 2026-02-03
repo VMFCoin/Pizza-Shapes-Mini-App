@@ -105,8 +105,8 @@ function GameOverContent() {
       )}
 
       {/* Main content */}
-      <div className="relative z-10 px-4 pt-12 pb-32 min-h-[100svh] flex flex-col justify-center">
-        <div className="w-full max-w-lg mx-auto space-y-2">
+      <div className="relative z-10 px-2 pt-12 pb-32 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-md mx-auto space-y-2">
         {/* Result header */}
         <motion.div
           className="text-center mb-8"
@@ -294,7 +294,7 @@ function GameOverContent() {
       </div>
 
       {/* Bottom actions */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-2 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
         <div className="space-y-3">
           <motion.button
             onClick={handleShare}

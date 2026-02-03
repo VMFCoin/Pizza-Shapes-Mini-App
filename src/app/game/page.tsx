@@ -164,7 +164,7 @@ function GameContent() {
       <Background />
 
       {/* Header */}
-      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 p-3 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-2 pt-3 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
         <div className="flex items-center justify-between">
           <div className="text-sm">
             <span className="text-gray-400">Turn </span>
@@ -250,7 +250,7 @@ function GameContent() {
       </div>
 
       {/* Bottom controls */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg p-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-2 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
         <div>
           {/* Dice roll phase */}
           {gamePhase === 'rolling' && isMyTurn && (

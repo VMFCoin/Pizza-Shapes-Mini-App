@@ -43,7 +43,7 @@ export default function LeaderboardPage() {
       <Background />
 
       {/* Header */}
-      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 p-4 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-2 pt-4 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
         <div className="flex items-center justify-between">
           <motion.button
             onClick={() => router.push('/')}
@@ -58,8 +58,8 @@ export default function LeaderboardPage() {
       </header>
 
       {/* Main content */}
-      <div className="pt-24 pb-8 px-4 min-h-[100svh] flex flex-col justify-center">
-        <div className="w-full max-w-lg mx-auto space-y-2">
+      <div className="pt-24 pb-8 px-2 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-md mx-auto space-y-2">
           {/* Tabs */}
           <div className="flex gap-2">
             {(['weekly', 'lifetime'] as TabType[]).map((tab) => (

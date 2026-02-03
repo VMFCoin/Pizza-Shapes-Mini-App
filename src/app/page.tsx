@@ -46,8 +46,8 @@ export default function HomePage() {
       <Background />
 
       {/* Vertically centered content (when space allows). */}
-      <div className="relative z-10 min-h-[100svh] flex flex-col justify-center px-4 py-10 safe-area-top safe-area-bottom">
-        <div className="w-full max-w-lg mx-auto space-y-2">
+      <div className="relative z-10 min-h-[100svh] flex flex-col justify-center px-2 py-10 safe-area-top safe-area-bottom">
+        <div className="w-full max-w-md mx-auto space-y-2">
           {/* Hero */}
           <motion.div
             className="text-center mb-8"
