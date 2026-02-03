@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   SquareGrid,
   Dice,
-  PlayerCard,
   PlayerCardCompact,
   CaptureNotification,
   WalletDisplayCompact,
@@ -14,9 +13,9 @@ import {
   Background,
 } from '@/components';
 import { useGameState, useWallet, useFarcaster } from '@/hooks';
-import { Player, PizzaSlice, PLAYER_COLORS } from '@/types';
+import { Player, PLAYER_COLORS } from '@/types';
 
-export default function GamePage() {
+function GameContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const matchId = searchParams.get('matchId') || 'demo_match';
@@ -324,5 +323,25 @@ export default function GamePage() {
       {/* Confetti on capture streak */}
       <Confetti isActive={captureStreak >= 3} />
     </main>
+  );
+}
+
+export default function GamePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-game-dark">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="text-6xl"
+          >
+            🍕
+          </motion.div>
+        </div>
+      }
+    >
+      <GameContent />
+    </Suspense>
   );
 }

@@ -1,21 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  PizzaLogo,
-  PlayerCard,
   Confetti,
   Fireworks,
   CoinRain,
   Background,
 } from '@/components';
-import { useFarcaster, useWallet } from '@/hooks';
+import { useFarcaster } from '@/hooks';
 import { Player, PLAYER_COLORS } from '@/types';
 
 // Demo match results
-const demoResults = {
+const demoResults: {
+  players: Player[];
+  scores: Record<string, number>;
+  prize: bigint;
+} = {
   players: [
     {
       id: 'player_12345',
@@ -41,14 +43,13 @@ const demoResults = {
   prize: BigInt(670) * BigInt(10 ** 15), // 0.67 ETH worth of PIZZA
 };
 
-export default function GameOverPage() {
+function GameOverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const matchId = searchParams.get('matchId');
   const winnerId = searchParams.get('winner');
 
   const { context, shareMatchWin, composeCast } = useFarcaster();
-  const { balance } = useWallet();
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [hasShared, setHasShared] = useState(false);
@@ -326,5 +327,25 @@ export default function GameOverPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function GameOverPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-game-dark">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="text-6xl"
+          >
+            🍕
+          </motion.div>
+        </div>
+      }
+    >
+      <GameOverContent />
+    </Suspense>
   );
 }

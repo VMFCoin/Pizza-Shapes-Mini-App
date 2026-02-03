@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactElement } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DiceAnimationState } from '@/types';
 
 interface DiceProps {
   value: number | null;
@@ -11,7 +10,7 @@ interface DiceProps {
   disabled?: boolean;
 }
 
-const diceFaces: Record<number, JSX.Element> = {
+const diceFaces: Record<number, ReactElement> = {
   1: (
     <div className="grid place-items-center h-full">
       <div className="w-4 h-4 bg-game-dark rounded-full" />

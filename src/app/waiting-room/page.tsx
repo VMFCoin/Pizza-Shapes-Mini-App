@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -12,7 +12,7 @@ import {
 import { useWallet, useFarcaster, useMatchmaking } from '@/hooks';
 import { ENTRY_TIERS, Player } from '@/types';
 
-export default function WaitingRoomPage() {
+function WaitingRoomContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tierParam = searchParams.get('tier');
@@ -214,5 +214,25 @@ export default function WaitingRoomPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function WaitingRoomPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-game-dark">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="text-6xl"
+          >
+            🍕
+          </motion.div>
+        </div>
+      }
+    >
+      <WaitingRoomContent />
+    </Suspense>
   );
 }
