@@ -4,9 +4,9 @@ import './globals.css';
 // Farcaster Mini App embed metadata
 const fcMiniApp = {
   version: "1",
-  imageUrl: "https://pizza-shapes-mini-app.vercel.app/og-image.png",
+  imageUrl: "https://pizza-shapes-mini-app.vercel.app/og.png",
   button: {
-    title: "Play Now",
+    title: "Connect Dots",
     action: {
       type: "launch_frame",
       name: "Pizza Dots",
@@ -18,13 +18,13 @@ const fcMiniApp = {
 };
 
 export const metadata: Metadata = {
-  title: 'Pizza Dots - Dots & Boxes on Base',
-  description: 'A multiplayer, turn-based strategy game. Capture pizza slices and earn $PIZZA rewards on Base mainnet.',
+  title: 'PIZZA DOTS',
+  description: 'A competitive arcade puzzle where sharp connections turn dots into pizza slices. No RNG. No mercy. Just clean lines and high scores.',
   metadataBase: new URL('https://pizza-shapes-mini-app.vercel.app'),
   openGraph: {
-    title: 'Pizza Dots',
-    description: 'Capture pizza slices and earn $PIZZA rewards!',
-    images: ['/og-image.png'],
+    title: 'PIZZA DOTS',
+    description: 'A competitive arcade puzzle where sharp connections turn dots into pizza slices. No RNG. No mercy. Just clean lines and high scores.',
+    images: ['/og.png'],
   },
   other: {
     'fc:miniapp': JSON.stringify(fcMiniApp),
