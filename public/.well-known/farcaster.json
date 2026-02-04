@@ -9,7 +9,7 @@
     "name": "Pizza Dots",
     "iconUrl": "https://pizza-shapes-mini-app.vercel.app/icon.png",
     "homeUrl": "https://pizza-shapes-mini-app.vercel.app",
-    "imageUrl": "https://pizza-shapes-mini-app.vercel.app/og-image.png",
+    "imageUrl": "https://i.postimg.cc/MGj6qZHc/share-image.png",
     "buttonTitle": "Connect Dots",
     "splashImageUrl": "https://pizza-shapes-mini-app.vercel.app/splash.png",
     "splashBackgroundColor": "#1A1A2E",
@@ -33,6 +33,6 @@
     "tagline": "Every dot is a slice.",
     "ogTitle": "PIZZA DOTS",
     "ogDescription": "Connect dots into pizza slices. Skill-based combos, no RNG—just high scores.",
-    "ogImageUrl": "https://pizza-shapes-mini-app.vercel.app/og.png"
+    "ogImageUrl": "https://i.postimg.cc/MGj6qZHc/share-image.png"
   }
 }

@@ -154,7 +154,8 @@ export function useFarcaster(): UseFarcasterReturn {
   // Share invite to get others to play
   const shareInvite = useCallback(() => {
     const text = `Connect the dots. Capture the slices. Win $PIZZA!`;
-    composeCast(text);
+    const shareImage = 'https://i.postimg.cc/MGj6qZHc/share-image.png';
+    composeCast(text, [shareImage]);
   }, [composeCast]);
 
   // Share match win
