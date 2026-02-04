@@ -7,5 +7,6 @@ export { WalletDisplay, WalletDisplayCompact } from './WalletDisplay';
 export { PizzaLogo, PizzaShapesLogo } from './PizzaLogo';
 export { Confetti, Fireworks, CoinRain } from './Confetti';
 export { FreeRollModal } from './FreeRollModal';
+export { ShareInviteModal } from './ShareInviteModal';
 export { Background, AmusementParkBackground } from './Background';
 export { DotText, GlowText } from './DotText';

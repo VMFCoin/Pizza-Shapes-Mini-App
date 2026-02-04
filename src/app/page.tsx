@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { parseUnits } from 'viem';
 import {
   WalletDisplay,
   EntryTierSelector,
@@ -12,7 +13,7 @@ import {
   DotText,
   GlowText,
 } from '@/components';
-import { useWallet, useFarcaster } from '@/hooks';
+import { useWallet, useFarcaster, useOnChainStats } from '@/hooks';
 import { ENTRY_TIERS } from '@/types';
 
 // Colorful dot colors for the theme
@@ -21,12 +22,22 @@ const DOT_COLORS = ['#FF6B6B', '#4ECDC4', '#F7DC6F', '#BB8FCE', '#58D68D', '#5DA
 export default function HomePage() {
   const router = useRouter();
   const { address, balance, isConnected, connect, isConnecting } = useWallet();
-  const { context, viewToken } = useFarcaster();
+  const { context, viewToken, viewProfile } = useFarcaster();
+  const { stats: onChainStats, isLoading: statsLoading } = useOnChainStats(address);
 
   const [selectedTier, setSelectedTier] = useState(2);
   const [showFreeRoll, setShowFreeRoll] = useState(false);
 
   const currentTier = ENTRY_TIERS.find(t => t.id === selectedTier)!;
+
+  // Check if user has enough balance for the selected tier
+  const requiredAmount = useMemo(() => {
+    return parseUnits(currentTier.amount.toString(), 18);
+  }, [currentTier.amount]);
+
+  const hasEnoughBalance = useMemo(() => {
+    return balance >= requiredAmount;
+  }, [balance, requiredAmount]);
 
   const handlePlayNow = async () => {
     if (!isConnected) {
@@ -234,7 +245,10 @@ export default function HomePage() {
                 border: '1px solid rgba(78, 205, 196, 0.3)',
               }}
             >
-              <div className="flex items-center gap-3 mb-3">
+              <button
+                onClick={() => viewProfile(context.fid)}
+                className="flex items-center gap-3 mb-3 w-full text-left hover:opacity-80 transition-opacity"
+              >
                 <img
                   src={context.pfpUrl}
                   alt={context.displayName}
@@ -244,66 +258,96 @@ export default function HomePage() {
                     border: '2px solid #4ECDC4',
                   }}
                 />
-                <div>
+                <div className="flex-1">
                   <GlowText color="#FFFFFF" className="font-semibold">
                     {context.displayName}
                   </GlowText>
                   <p className="text-xs text-gray-400">FID: {context.fid}</p>
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                {[
-                  { value: '42', label: 'Games', color: '#FF6B6B' },
-                  { value: '15', label: 'Wins', color: '#F7DC6F' },
-                  { value: '156', label: 'Slices', color: '#4ECDC4' },
-                ].map((stat, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg p-2"
-                    style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${stat.color}40`,
-                    }}
+                <span className="text-gray-400 text-xs">View Profile →</span>
+              </button>
+              {statsLoading ? (
+                <div className="flex justify-center py-4">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="text-2xl"
                   >
-                    <GlowText color={stat.color} className="font-bold">
-                      {stat.value}
-                    </GlowText>
-                    <p className="text-xs text-gray-400">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
+                    🍕
+                  </motion.div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                  {[
+                    { value: onChainStats?.gamesPlayed ?? 0, label: 'Games', color: '#FF6B6B' },
+                    { value: onChainStats?.wins ?? 0, label: 'Wins', color: '#F7DC6F' },
+                    { value: onChainStats?.slicesCaptured ?? 0, label: 'Slices', color: '#4ECDC4' },
+                  ].map((stat, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg p-2"
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${stat.color}40`,
+                      }}
+                    >
+                      <GlowText color={stat.color} className="font-bold">
+                        {stat.value}
+                      </GlowText>
+                      <p className="text-xs text-gray-400">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
           {/* Bottom buttons */}
           <div className="space-y-3">
-            <motion.button
-              onClick={handlePlayNow}
-              disabled={isConnecting}
-              className="w-full py-4 rounded-xl font-bold text-lg text-white"
-              style={{
-                background: 'linear-gradient(135deg, #FF6B6B, #F7DC6F, #4ECDC4)',
-                boxShadow: '0 0 30px rgba(247, 220, 111, 0.4), 0 0 60px rgba(78, 205, 196, 0.2)',
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {isConnecting ? (
+            {isConnected && !hasEnoughBalance ? (
+              <motion.button
+                onClick={() => viewToken()}
+                className="w-full py-4 rounded-xl font-bold text-lg text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #F7DC6F, #FF6B6B)',
+                  boxShadow: '0 0 30px rgba(247, 220, 111, 0.4), 0 0 60px rgba(255, 107, 107, 0.2)',
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
                 <span className="flex items-center justify-center gap-2">
-                  <motion.span
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  >
-                    🍕
-                  </motion.span>
-                  Loading...
+                  🍕 Buy $PIZZA to Play {currentTier.label}
                 </span>
-              ) : !isConnected ? (
-                'Connect Wallet to Play'
-              ) : (
-                `Play Now - ${currentTier.label}`
-              )}
-            </motion.button>
+              </motion.button>
+            ) : (
+              <motion.button
+                onClick={handlePlayNow}
+                disabled={isConnecting}
+                className="w-full py-4 rounded-xl font-bold text-lg text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #FF6B6B, #F7DC6F, #4ECDC4)',
+                  boxShadow: '0 0 30px rgba(247, 220, 111, 0.4), 0 0 60px rgba(78, 205, 196, 0.2)',
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {isConnecting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <motion.span
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    >
+                      🍕
+                    </motion.span>
+                    Loading...
+                  </span>
+                ) : !isConnected ? (
+                  'Connect Wallet to Play'
+                ) : (
+                  `Play Now - ${currentTier.label}`
+                )}
+              </motion.button>
+            )}
 
             <div className="flex gap-3">
               <motion.button

@@ -8,6 +8,7 @@ import {
   Fireworks,
   CoinRain,
   Background,
+  ShareInviteModal,
 } from '@/components';
 import { useFarcaster } from '@/hooks';
 import { Player, PLAYER_COLORS } from '@/types';
@@ -49,19 +50,25 @@ function GameOverContent() {
   const matchId = searchParams.get('matchId');
   const winnerId = searchParams.get('winner');
 
-  const { context, shareMatchWin, composeCast } = useFarcaster();
+  const { context, shareMatchWin, composeCast, shareInvite } = useFarcaster();
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [hasShared, setHasShared] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const isWinner = winnerId === `player_${context?.fid}`;
   const winner = demoResults.players.find(p => p.id === winnerId) || demoResults.players[0];
 
-  // Trigger celebration animations
+  // Trigger celebration animations and show invite modal after delay
   useEffect(() => {
     if (isWinner) {
       setShowCelebration(true);
     }
+    // Show invite modal after 3 seconds
+    const timer = setTimeout(() => {
+      setShowInviteModal(true);
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [isWinner]);
 
   const formatPrize = (amount: bigint) => {
@@ -326,6 +333,14 @@ function GameOverContent() {
           </div>
         </div>
       </div>
+
+      {/* Invite friends modal */}
+      <ShareInviteModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onShare={shareInvite}
+        onSkip={() => setShowInviteModal(false)}
+      />
     </main>
   );
 }

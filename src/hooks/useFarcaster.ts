@@ -13,6 +13,8 @@ interface UseFarcasterReturn {
   viewToken: (tokenAddress?: string) => void;
   composeCast: (text: string, embeds?: string[]) => void;
   viewProfile: (fid: number) => void;
+  addMiniApp: () => Promise<void>;
+  shareInvite: () => void;
   shareMatchWin: (matchId: string, slicesWon: number, prize: bigint) => void;
   shareFreeRollWin: (prize: bigint) => void;
   shareCaptureStreak: (streak: number) => void;
@@ -98,33 +100,62 @@ export function useFarcaster(): UseFarcasterReturn {
     initFarcaster();
   }, []);
 
-  // View $PIZZA token
+  // View $PIZZA token using CAIP-19 format
+  // Base chainId is 8453, so CAIP-19 format is: eip155:8453/erc20:{address}
   const viewToken = useCallback((tokenAddress: string = PIZZA_TOKEN) => {
+    const caip19Token = `eip155:8453/erc20:${tokenAddress}`;
     if (isFrameContext) {
-      sdk.actions.openUrl(`https://basescan.org/token/${tokenAddress}`);
+      sdk.actions.viewToken({ token: caip19Token });
     } else {
+      // Fallback for non-Farcaster context
       window.open(`https://basescan.org/token/${tokenAddress}`, '_blank');
     }
   }, [isFrameContext]);
 
-  // Compose a cast
-  const composeCast = useCallback((text: string, _embeds?: string[]) => {
+  // Compose a cast using SDK composeCast action
+  const composeCast = useCallback((text: string, embeds?: string[]) => {
     if (isFrameContext) {
-      sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`);
+      // Use proper SDK method with embeds support
+      const castOptions: { text: string; embeds?: [] | [string] | [string, string] } = { text };
+      if (embeds && embeds.length > 0) {
+        // SDK only supports up to 2 embeds
+        castOptions.embeds = embeds.slice(0, 2) as [] | [string] | [string, string];
+      }
+      sdk.actions.composeCast(castOptions);
     } else {
+      // Fallback for non-Farcaster context
       const encodedText = encodeURIComponent(text);
       window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
     }
   }, [isFrameContext]);
 
-  // View a user profile
+  // View a user profile using SDK viewProfile action
   const viewProfile = useCallback((fid: number) => {
     if (isFrameContext) {
-      sdk.actions.openUrl(`https://warpcast.com/~/profiles/${fid}`);
+      sdk.actions.viewProfile({ fid });
     } else {
+      // Fallback for non-Farcaster context
       window.open(`https://warpcast.com/~/profiles/${fid}`, '_blank');
     }
   }, [isFrameContext]);
+
+  // Prompt user to add the mini app
+  const addMiniApp = useCallback(async () => {
+    if (isFrameContext) {
+      try {
+        await sdk.actions.addMiniApp();
+      } catch (error) {
+        // User rejected or domain mismatch
+        console.error('Failed to add mini app:', error);
+      }
+    }
+  }, [isFrameContext]);
+
+  // Share invite to get others to play
+  const shareInvite = useCallback(() => {
+    const text = `Connect the dots. Capture the slices. Win $PIZZA!`;
+    composeCast(text);
+  }, [composeCast]);
 
   // Share match win
   const shareMatchWin = useCallback((_matchId: string, slicesWon: number, prize: bigint) => {
@@ -169,6 +200,8 @@ export function useFarcaster(): UseFarcasterReturn {
     viewToken,
     composeCast,
     viewProfile,
+    addMiniApp,
+    shareInvite,
     shareMatchWin,
     shareFreeRollWin,
     shareCaptureStreak,
