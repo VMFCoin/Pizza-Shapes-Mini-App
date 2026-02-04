@@ -5,6 +5,7 @@
       "dom.iterable",
       "esnext"
     ],
+    "baseUrl": ".",
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -38,6 +39,9 @@
   "exclude": [
     "node_modules",
     "src/phaser",
-    "supabase"
+    "supabase",
+    "hardhat.config.ts",
+    "contracts",
+    "scripts"
   ]
 }

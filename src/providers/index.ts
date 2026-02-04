@@ -1,2 +1,1 @@
-export { Providers } from './Providers';
-export { WagmiProvider } from './WagmiProvider';
+export { default as ContextProvider } from './ContextProvider';

@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useAccount, useConnect, useDisconnect, usePublicClient, useWalletClient } from 'wagmi';
-import { injected } from 'wagmi/connectors';
-import { parseUnits, formatUnits, encodeFunctionData, type Address } from 'viem';
-import sdk from '@farcaster/miniapp-sdk';
-import { PIZZA_TOKEN, CONTRACTS, BASE_MAINNET } from '@/lib/constants';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
+import { useAppKit } from '@reown/appkit/react';
+import { parseUnits, formatUnits, type Address } from 'viem';
+import { PIZZA_TOKEN, CONTRACTS } from '@/lib/constants';
 import { ERC20_ABI, SETTLEMENT_ABI } from '@/lib/contractAbis';
-import { BASE_CHAIN_ID } from '@/lib/wagmi';
 
 // Transaction states for UI feedback
 export type TransactionStatus =
@@ -38,11 +36,11 @@ interface UseWalletReturn {
   isLoadingBalance: boolean;
 
   // Connection actions
-  connect: () => Promise<void>;
+  connect: () => void;
   disconnect: () => void;
 
   // Token actions
-  refreshBalance: () => Promise<void>;
+  refreshBalance: () => void;
   approvePizza: (amount: bigint, spender?: Address) => Promise<TransactionState>;
   checkAllowance: (spender?: Address) => Promise<bigint>;
 
@@ -52,34 +50,42 @@ interface UseWalletReturn {
   // Transaction state
   txState: TransactionState;
   resetTxState: () => void;
+
+  // Write contract state
+  isPending: boolean;
+  isConfirming: boolean;
+  isConfirmed: boolean;
 }
 
 export function useWallet(): UseWalletReturn {
-  // Wagmi hooks
-  const { address, isConnected, chainId } = useAccount();
-  const { connectAsync, isPending: isConnecting } = useConnect();
-  const { disconnectAsync } = useDisconnect();
+  // Account state from wagmi
+  const { address, isConnected, isConnecting, chainId } = useAccount();
+
+  // AppKit for wallet connection modal
+  const { open } = useAppKit();
+
+  // Public client for reading
   const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
+
+  // Write contract hooks
+  const { writeContract, data: writeHash, isPending, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: writeHash });
+
+  // Read $PIZZA balance
+  const { data: balanceData, refetch: refetchBalance, isLoading: isLoadingBalance } = useReadContract({
+    address: PIZZA_TOKEN as Address,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    },
+  });
 
   // Local state
-  const [balance, setBalance] = useState<bigint>(BigInt(0));
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [txState, setTxState] = useState<TransactionState>({ status: 'idle' });
-  const [isFarcasterContext, setIsFarcasterContext] = useState(false);
 
-  // Check if running in Farcaster Mini App
-  useEffect(() => {
-    const checkContext = async () => {
-      try {
-        const ctx = await sdk.context;
-        setIsFarcasterContext(!!ctx?.user);
-      } catch {
-        setIsFarcasterContext(false);
-      }
-    };
-    checkContext();
-  }, []);
+  const balance = (balanceData as bigint) || BigInt(0);
 
   // Format balance for display
   const formattedBalance = useMemo(() => {
@@ -89,49 +95,20 @@ export function useWallet(): UseWalletReturn {
     return value.toFixed(2);
   }, [balance]);
 
-  // Fetch $PIZZA balance
-  const refreshBalance = useCallback(async () => {
-    if (!address || !publicClient) return;
-
-    setIsLoadingBalance(true);
-    try {
-      const balanceResult = await publicClient.readContract({
-        address: PIZZA_TOKEN as Address,
-        abi: ERC20_ABI,
-        functionName: 'balanceOf',
-        args: [address],
-      });
-      setBalance(balanceResult as bigint);
-    } catch (error) {
-      console.error('Failed to fetch balance:', error);
-    } finally {
-      setIsLoadingBalance(false);
-    }
-  }, [address, publicClient]);
-
-  // Connect wallet
-  const connect = useCallback(async () => {
-    try {
-      // In Farcaster Mini App context, use the injected wallet
-      await connectAsync({
-        connector: injected(),
-        chainId: BASE_CHAIN_ID,
-      });
-    } catch (error) {
-      console.error('Failed to connect wallet:', error);
-      throw error;
-    }
-  }, [connectAsync]);
+  // Connect wallet using AppKit modal
+  const connect = useCallback(() => {
+    open();
+  }, [open]);
 
   // Disconnect wallet
-  const disconnect = useCallback(async () => {
-    try {
-      await disconnectAsync();
-      setBalance(BigInt(0));
-    } catch (error) {
-      console.error('Failed to disconnect:', error);
-    }
-  }, [disconnectAsync]);
+  const disconnect = useCallback(() => {
+    open({ view: 'Account' });
+  }, [open]);
+
+  // Refresh balance
+  const refreshBalance = useCallback(() => {
+    refetchBalance();
+  }, [refetchBalance]);
 
   // Check token allowance
   const checkAllowance = useCallback(async (spender?: Address): Promise<bigint> => {
@@ -158,7 +135,7 @@ export function useWallet(): UseWalletReturn {
     amount: bigint,
     spender?: Address
   ): Promise<TransactionState> => {
-    if (!walletClient || !address || !publicClient) {
+    if (!address) {
       return { status: 'error', error: 'Wallet not connected' };
     }
 
@@ -176,38 +153,28 @@ export function useWallet(): UseWalletReturn {
       setTxState({ status: 'approving' });
 
       // Send approval transaction
-      const hash = await walletClient.writeContract({
+      writeContract({
         address: PIZZA_TOKEN as Address,
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [spenderAddress, amount],
       });
 
-      setTxState({ status: 'confirming', hash });
-
-      // Wait for confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-      if (receipt.status === 'success') {
-        setTxState({ status: 'success', hash });
-        return { status: 'success', hash };
-      } else {
-        setTxState({ status: 'error', error: 'Transaction failed' });
-        return { status: 'error', error: 'Transaction failed' };
-      }
+      // Note: Transaction confirmation is handled by useWaitForTransactionReceipt
+      return { status: 'pending_confirmation' };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setTxState({ status: 'error', error: errorMessage });
       return { status: 'error', error: errorMessage };
     }
-  }, [walletClient, address, publicClient, checkAllowance]);
+  }, [address, checkAllowance, writeContract]);
 
   // Enter match with entry fee
   const enterMatch = useCallback(async (
     matchId: string,
     tier: number
   ): Promise<TransactionState> => {
-    if (!walletClient || !address || !publicClient) {
+    if (!address) {
       return { status: 'error', error: 'Wallet not connected' };
     }
 
@@ -233,10 +200,15 @@ export function useWallet(): UseWalletReturn {
       // Step 1: Approve if needed
       const allowance = await checkAllowance(CONTRACTS.settlement as Address);
       if (allowance < amount) {
-        const approvalResult = await approvePizza(amount, CONTRACTS.settlement as Address);
-        if (approvalResult.status === 'error') {
-          return approvalResult;
-        }
+        setTxState({ status: 'approving' });
+        writeContract({
+          address: PIZZA_TOKEN as Address,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [CONTRACTS.settlement as Address, amount],
+        });
+        // Wait for approval to be confirmed before entering match
+        return { status: 'pending_confirmation' };
       }
 
       setTxState({ status: 'pending_confirmation' });
@@ -247,44 +219,38 @@ export function useWallet(): UseWalletReturn {
         : `0x${matchId.padEnd(64, '0')}` as `0x${string}`;
 
       // Step 3: Enter match
-      const hash = await walletClient.writeContract({
+      writeContract({
         address: CONTRACTS.settlement as Address,
         abi: SETTLEMENT_ABI,
         functionName: 'enterMatch',
         args: [matchIdBytes, tier],
       });
 
-      setTxState({ status: 'confirming', hash });
-
-      // Wait for confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-      if (receipt.status === 'success') {
-        // Refresh balance after successful entry
-        await refreshBalance();
-        setTxState({ status: 'success', hash });
-        return { status: 'success', hash };
-      } else {
-        setTxState({ status: 'error', error: 'Transaction failed' });
-        return { status: 'error', error: 'Transaction failed' };
-      }
+      return { status: 'pending_confirmation' };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setTxState({ status: 'error', error: errorMessage });
       return { status: 'error', error: errorMessage };
     }
-  }, [walletClient, address, publicClient, balance, checkAllowance, approvePizza, refreshBalance]);
+  }, [address, balance, checkAllowance, writeContract]);
 
   // Reset transaction state
   const resetTxState = useCallback(() => {
     setTxState({ status: 'idle' });
-  }, []);
+    reset();
+  }, [reset]);
 
-  // Auto-refresh balance when connected
+  // Update txState when transaction confirms
+  useEffect(() => {
+    if (isConfirmed && writeHash) {
+      setTxState({ status: 'success', hash: writeHash });
+      refreshBalance();
+    }
+  }, [isConfirmed, writeHash, refreshBalance]);
+
+  // Auto-refresh balance periodically when connected
   useEffect(() => {
     if (isConnected && address) {
-      refreshBalance();
-      // Refresh every 30 seconds
       const interval = setInterval(refreshBalance, 30000);
       return () => clearInterval(interval);
     }
@@ -306,5 +272,8 @@ export function useWallet(): UseWalletReturn {
     enterMatch,
     txState,
     resetTxState,
+    isPending,
+    isConfirming,
+    isConfirmed,
   };
 }

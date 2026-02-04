@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
-import { Providers } from '@/providers';
+import ContextProvider from '@/providers/ContextProvider';
 
 // Farcaster Mini App embed metadata
 const fcMiniApp = {
@@ -32,19 +33,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const headersObj = await headers();
+  const cookies = headersObj.get('cookie');
+
   return (
     <html lang="en">
       <body className="min-h-screen bg-game-dark text-white antialiased flex flex-col items-center px-2">
-        <Providers>
+        <ContextProvider cookies={cookies}>
           <div className="w-full max-w-md mx-auto">
             {children}
           </div>
-        </Providers>
+        </ContextProvider>
       </body>
     </html>
   );

@@ -1,32 +1,36 @@
-import { http, createConfig, createStorage } from 'wagmi';
-import { base } from 'wagmi/chains';
-import { injected } from 'wagmi/connectors';
+'use client';
+import { cookieStorage, createStorage } from '@wagmi/core';
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { injected, coinbaseWallet } from 'wagmi/connectors';
+import { base } from '@reown/appkit/networks';
+import type { CreateConnectorFn } from 'wagmi';
 
-// Base Mainnet configuration for Pizza Shapes
-export const config = createConfig({
-  chains: [base],
-  connectors: [
-    // Injected connector works with Farcaster Mini App wallet
-    injected({
-      shimDisconnect: true,
-    }),
-  ],
-  storage: createStorage({
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+export const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID as string;
+
+if (!projectId) {
+  console.warn('NEXT_PUBLIC_REOWN_PROJECT_ID is not defined');
+}
+
+export const networks = [base];
+
+const connectors: CreateConnectorFn[] = [
+  coinbaseWallet({
+    appName: 'Pizza Shapes',
+    preference: 'all',
+    enableMobileWalletLink: true,
   }),
-  transports: {
-    [base.id]: http('https://mainnet.base.org'),
-  },
+  injected({ shimDisconnect: true }),
+];
+
+export const wagmiAdapter = new WagmiAdapter({
+  storage: createStorage({ storage: cookieStorage }),
+  ssr: true,
+  projectId,
+  networks,
+  connectors,
 });
 
-// Export chain for reference
-export const baseChain = base;
+export const config = wagmiAdapter.wagmiConfig;
 
 // Chain ID constant
 export const BASE_CHAIN_ID = 8453;
-
-declare module 'wagmi' {
-  interface Register {
-    config: typeof config;
-  }
-}
