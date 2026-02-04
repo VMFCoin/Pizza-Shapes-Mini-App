@@ -1,0 +1,1127 @@
+{
+  "manifestVersion": "3.2",
+  "proxies": [
+    {
+      "address": "0xB46fDAC6945E09b223E5A76fd9Cf1C3D2C6E96dD",
+      "txHash": "0x82d121b8b1790506149b3476db09c9f1817a1ad90519139e1e626eb7e27c3ad1",
+      "kind": "uups"
+    },
+    {
+      "address": "0x1b8A62c7bBE77803b06faCE9436f9608d462C910",
+      "txHash": "0x4fdcb27d76a2d4bc708f8a2b4f5fa00b8e12b61da431a1bfb4957dbe98995a81",
+      "kind": "uups"
+    },
+    {
+      "address": "0xFEc9Cc87e25b2bc8a0D991d34C30F9645deB8824",
+      "txHash": "0x94a9353cc28634814c796f625b519c764a63c2936183111d7d56c1ef9c809a44",
+      "kind": "uups"
+    },
+    {
+      "address": "0x93f13b6AcbBe7d6C3992F599D6C5ea3E9A94Fe74",
+      "txHash": "0xaabf568fd90d1e74ba1ddd0452e17fd759f405f68a186e512151aa299dad7055",
+      "kind": "uups"
+    },
+    {
+      "address": "0x95AfEFa4E6d032eEbe4D05d209c46B80daD55ADf",
+      "txHash": "0x389013731cff0c3c3614571f7f12758dc40d55dfaa62d190b32637c4bffa7385",
+      "kind": "uups"
+    },
+    {
+      "address": "0xe841A3c453C75D58533c498F1a43e34283de19B9",
+      "txHash": "0xa44270d82008148aee323b2931b3ab41af6a5e940f82f9a4af5ef603aefc44cd",
+      "kind": "uups"
+    }
+  ],
+  "impls": {
+    "b58bc853f4eee4482200765f67cb598137badb9b80d48f5d84901d64ce48b913": {
+      "address": "0x479d2590a78eB2775FcBA05F7f4DAa9425bd97C6",
+      "txHash": "0xb0a4561e6b99ea51056aa4c9ce3bf288e7cfcac882ba3397d926ee7a66c2c80a",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "playerStats",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_struct(Stats)4470_storage)",
+            "contract": "PizzaDotsStats",
+            "src": "contracts/PizzaShapesStats.sol:22"
+          },
+          {
+            "label": "weeklyPlayers",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "PizzaDotsStats",
+            "src": "contracts/PizzaShapesStats.sol:25"
+          },
+          {
+            "label": "isWeeklyPlayer",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "PizzaDotsStats",
+            "src": "contracts/PizzaShapesStats.sol:26"
+          },
+          {
+            "label": "weekStartTimestamp",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256",
+            "contract": "PizzaDotsStats",
+            "src": "contracts/PizzaShapesStats.sol:27"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)26_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)36_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)147_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)298_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)26_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Stats)4470_storage)": {
+            "label": "mapping(address => struct PizzaDotsStats.Stats)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Stats)4470_storage": {
+            "label": "struct PizzaDotsStats.Stats",
+            "members": [
+              {
+                "label": "gamesPlayed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "gamesWon",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "slicesCaptured",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "weeklySlices",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "lifetimeEarnings",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "lastGameTimestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              }
+            ],
+            "numberOfBytes": "192"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+              "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:62",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "612aba353ab4b781c2ced8bb1b1ac0cc9860e833c3bbc307d1c9315aa9ed2756": {
+      "address": "0x5d49203f5B8F0De436b1B0eBBC3f742a673FedF8",
+      "txHash": "0xb42b290a9894cb0b76cd72858bbf8630133358f859d8bb77bf80a570a284c008",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "pizza",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IPizzaToken)5413",
+            "contract": "WeeklyVault",
+            "src": "contracts/WeeklyVault.sol:18"
+          },
+          {
+            "label": "settlementContract",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address",
+            "contract": "WeeklyVault",
+            "src": "contracts/WeeklyVault.sol:19"
+          },
+          {
+            "label": "totalDeposited",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256",
+            "contract": "WeeklyVault",
+            "src": "contracts/WeeklyVault.sol:22"
+          },
+          {
+            "label": "totalDistributed",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256",
+            "contract": "WeeklyVault",
+            "src": "contracts/WeeklyVault.sol:23"
+          },
+          {
+            "label": "weekNumber",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "WeeklyVault",
+            "src": "contracts/WeeklyVault.sol:24"
+          },
+          {
+            "label": "lastDistributionTime",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_uint256",
+            "contract": "WeeklyVault",
+            "src": "contracts/WeeklyVault.sol:25"
+          },
+          {
+            "label": "distributions",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_mapping(t_uint256,t_struct(WeeklyDistribution)4988_storage)",
+            "contract": "WeeklyVault",
+            "src": "contracts/WeeklyVault.sol:36"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)26_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)36_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)147_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)298_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)26_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)3_storage": {
+            "label": "address[3]",
+            "numberOfBytes": "96"
+          },
+          "t_array(t_uint256)3_storage": {
+            "label": "uint256[3]",
+            "numberOfBytes": "96"
+          },
+          "t_contract(IPizzaToken)5413": {
+            "label": "contract IPizzaToken",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_uint256,t_struct(WeeklyDistribution)4988_storage)": {
+            "label": "mapping(uint256 => struct WeeklyVault.WeeklyDistribution)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(WeeklyDistribution)4988_storage": {
+            "label": "struct WeeklyVault.WeeklyDistribution",
+            "members": [
+              {
+                "label": "weekNumber",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "winners",
+                "type": "t_array(t_address)3_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "amounts",
+                "type": "t_array(t_uint256)3_storage",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "totalDistributed",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              }
+            ],
+            "numberOfBytes": "288"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+              "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:62",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "4394401e0124863fcf0baa6fd1cb014fca7cd686d022098059394e3e673cfb68": {
+      "address": "0xB702DeA3AD5ea4F1A451b88A533d64A5bfb39BF7",
+      "txHash": "0xec2989adbf249055d80ab86b18491f6db6164418defd90f4b499fad41f8eac34",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "pizza",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IPizzaToken)5413",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:19"
+          },
+          {
+            "label": "settlementContract",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:20"
+          },
+          {
+            "label": "weeklyVault",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_address",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:21"
+          },
+          {
+            "label": "currentDayPool",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:24"
+          },
+          {
+            "label": "lastDayResetTimestamp",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:25"
+          },
+          {
+            "label": "totalPaidOut",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_uint256",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:26"
+          },
+          {
+            "label": "totalDaysRun",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:27"
+          },
+          {
+            "label": "lastRolls",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_mapping(t_uint256,t_struct(RollRecord)2309_storage)",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:40"
+          },
+          {
+            "label": "dailyWinners",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_mapping(t_uint256,t_array(t_struct(DailyWinner)2323_storage)dyn_storage)",
+            "contract": "FreeRollVault",
+            "src": "contracts/FreeRollVault.sol:51"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)26_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)36_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)147_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)298_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)26_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_struct(DailyWinner)2323_storage)dyn_storage": {
+            "label": "struct FreeRollVault.DailyWinner[]",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IPizzaToken)5413": {
+            "label": "contract IPizzaToken",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_uint256,t_array(t_struct(DailyWinner)2323_storage)dyn_storage)": {
+            "label": "mapping(uint256 => struct FreeRollVault.DailyWinner[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(RollRecord)2309_storage)": {
+            "label": "mapping(uint256 => struct FreeRollVault.RollRecord)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(DailyWinner)2323_storage": {
+            "label": "struct FreeRollVault.DailyWinner",
+            "members": [
+              {
+                "label": "fid",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "wallet",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "prize",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(RollRecord)2309_storage": {
+            "label": "struct FreeRollVault.RollRecord",
+            "members": [
+              {
+                "label": "dayNumber",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "selection",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "result",
+                "type": "t_uint8",
+                "offset": 1,
+                "slot": "1"
+              },
+              {
+                "label": "won",
+                "type": "t_bool",
+                "offset": 2,
+                "slot": "1"
+              },
+              {
+                "label": "prize",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+              "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:62",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "0e2c6096296a194b410585e9fd371144b91f715d2f41cd3041f3a608cf34c566": {
+      "address": "0x0398133b3a71794FfC621c49d19a722db67535e0",
+      "txHash": "0x3db2597748bae3c15f67dae00758d69be96bec16a03e4ed8c78fe8119e9e2c99",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "pizza",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IPizzaToken)5413",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:22"
+          },
+          {
+            "label": "statsContract",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IPizzaDotsStats)5369",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:25"
+          },
+          {
+            "label": "weeklyVault",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_address",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:45"
+          },
+          {
+            "label": "freeRollVault",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:46"
+          },
+          {
+            "label": "charityWallets",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_array(t_address)9_storage",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:49"
+          },
+          {
+            "label": "weeklyPool",
+            "offset": 0,
+            "slot": "13",
+            "type": "t_uint256",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:53"
+          },
+          {
+            "label": "freeRollPool",
+            "offset": 0,
+            "slot": "14",
+            "type": "t_uint256",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:54"
+          },
+          {
+            "label": "totalBurned",
+            "offset": 0,
+            "slot": "15",
+            "type": "t_uint256",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:55"
+          },
+          {
+            "label": "totalCharityDistributed",
+            "offset": 0,
+            "slot": "16",
+            "type": "t_uint256",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:56"
+          },
+          {
+            "label": "matches",
+            "offset": 0,
+            "slot": "17",
+            "type": "t_mapping(t_bytes32,t_struct(Match)3480_storage)",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:69"
+          },
+          {
+            "label": "playerSlices",
+            "offset": 0,
+            "slot": "18",
+            "type": "t_mapping(t_bytes32,t_mapping(t_address,t_uint256))",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:70"
+          },
+          {
+            "label": "playerEntered",
+            "offset": 0,
+            "slot": "19",
+            "type": "t_mapping(t_bytes32,t_mapping(t_address,t_bool))",
+            "contract": "PizzaShapesSettlementV2",
+            "src": "contracts/PizzaShapesSettlementV2.sol:71"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)26_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)36_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)147_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)298_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)26_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)9_storage": {
+            "label": "address[9]",
+            "numberOfBytes": "288"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IPizzaDotsStats)5369": {
+            "label": "contract IPizzaDotsStats",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPizzaToken)5413": {
+            "label": "contract IPizzaToken",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_mapping(t_address,t_bool))": {
+            "label": "mapping(bytes32 => mapping(address => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(bytes32 => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Match)3480_storage)": {
+            "label": "mapping(bytes32 => struct PizzaShapesSettlementV2.Match)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Match)3480_storage": {
+            "label": "struct PizzaShapesSettlementV2.Match",
+            "members": [
+              {
+                "label": "matchId",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "players",
+                "type": "t_array(t_address)dyn_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "entryAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "totalPool",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "settled",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "tier",
+                "type": "t_uint8",
+                "offset": 0,
+                "slot": "6"
+              }
+            ],
+            "numberOfBytes": "224"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+              "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:62",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

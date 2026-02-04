@@ -12,23 +12,31 @@ import {
   Confetti,
   Background,
 } from '@/components';
-import { useGameState, useWallet, useFarcaster } from '@/hooks';
-import { Player, PLAYER_COLORS } from '@/types';
+import { useWallet, useFarcaster } from '@/hooks';
+import { useRealtimeGame } from '@/hooks/useRealtimeGame';
+import { ENTRY_TIERS } from '@/types';
 
 function GameContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const matchId = searchParams.get('matchId') || 'demo_match';
-  const tier = searchParams.get('tier') || '1';
+  const matchId = searchParams.get('matchId');
+  const tierParam = searchParams.get('tier');
+  const tier = tierParam ? parseInt(tierParam) : 1;
 
   const { balance } = useWallet();
-  const { context, viewToken, viewProfile, shareCaptureStreak } = useFarcaster();
+  const { context, viewToken, shareCaptureStreak } = useFarcaster();
+
+  const tierConfig = ENTRY_TIERS.find(t => t.id === tier);
+  const gridSize = tierConfig?.gridSize || 4;
 
   const {
     gameState,
     gamePhase,
     currentPlayer,
-    initializeGame,
+    isMyTurn,
+    isLoading,
+    error,
+    connectionStatus,
     rollDice,
     drawEdge,
     endTurn,
@@ -36,7 +44,7 @@ function GameContent() {
     canDrawEdge,
     isGameOver,
     winner,
-  } = useGameState();
+  } = useRealtimeGame(matchId, context?.fid || null);
 
   const [isRolling, setIsRolling] = useState(false);
   const [captureNotification, setCaptureNotification] = useState<{
@@ -46,66 +54,39 @@ function GameContent() {
   } | null>(null);
   const [captureStreak, setCaptureStreak] = useState(0);
 
-  // Initialize game on mount
-  useEffect(() => {
-    if (!gameState && context) {
-      // Create players (current player + demo opponents)
-      const players: Player[] = [
-        {
-          id: `player_${context.fid}`,
-          fid: context.fid,
-          displayName: context.displayName,
-          pfpUrl: context.pfpUrl,
-          address: '',
-          color: PLAYER_COLORS[0],
-        },
-        {
-          id: 'bot_1',
-          fid: 100001,
-          displayName: 'PizzaBot',
-          pfpUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=bot1',
-          address: '',
-          color: PLAYER_COLORS[1],
-        },
-      ];
-
-      initializeGame(matchId, players, 4);
-    }
-  }, [gameState, context, matchId, initializeGame]);
-
   // Navigate to game over when game ends
   useEffect(() => {
     if (isGameOver && winner) {
       setTimeout(() => {
-        router.push(`/game-over?matchId=${matchId}&winner=${winner}`);
+        router.push(`/game-over?matchId=${matchId}&winner=${winner.id}`);
       }, 2000);
     }
   }, [isGameOver, winner, matchId, router]);
 
   // Auto-end turn when no moves remaining (and in drawing phase)
   useEffect(() => {
-    if (gameState && gamePhase === 'drawing' && gameState.movesRemaining === 0 && !isGameOver) {
+    if (gameState && gamePhase === 'drawing' && gameState.movesRemaining === 0 && !isGameOver && isMyTurn) {
       const timer = setTimeout(() => {
         endTurn();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [gameState, gamePhase, isGameOver, endTurn]);
+  }, [gameState, gamePhase, isGameOver, isMyTurn, endTurn]);
 
-  const handleRoll = useCallback(() => {
-    if (gamePhase !== 'rolling') return;
+  const handleRoll = useCallback(async () => {
+    if (gamePhase !== 'rolling' || !isMyTurn) return;
 
     setIsRolling(true);
-    setTimeout(() => {
-      rollDice();
+    setTimeout(async () => {
+      await rollDice();
       setIsRolling(false);
     }, 1500);
-  }, [gamePhase, rollDice]);
+  }, [gamePhase, isMyTurn, rollDice]);
 
-  const handleEdgeClick = useCallback((edgeId: string) => {
-    if (!canDrawEdge(edgeId) || !currentPlayer) return;
+  const handleEdgeClick = useCallback(async (edgeId: string) => {
+    if (!canDrawEdge(edgeId) || !currentPlayer || !isMyTurn) return;
 
-    const result = drawEdge(edgeId);
+    const result = await drawEdge(edgeId);
 
     if (result.captured.length > 0) {
       // Show capture notification
@@ -123,28 +104,53 @@ function GameContent() {
       if (newStreak >= 5) {
         shareCaptureStreak(newStreak);
       }
-
-      // Extra turn granted - do NOT end turn
-      // The movesRemaining is already incremented in useGameState
     } else {
       setCaptureStreak(0);
-      // No capture - check if turn should end
-      // Note: movesRemaining is decremented in useGameState.drawEdge
-      // so we check if it was 1 before (now 0 after decrement)
     }
+  }, [canDrawEdge, currentPlayer, isMyTurn, drawEdge, captureStreak, shareCaptureStreak]);
 
-    // Don't auto-end here - let the useGameState handle movesRemaining
-    // The player can continue if they have moves or got an extra turn
-  }, [canDrawEdge, currentPlayer, drawEdge, captureStreak, shareCaptureStreak]);
-
-  const handleEndTurn = useCallback(() => {
+  const handleEndTurn = useCallback(async () => {
     setCaptureStreak(0);
-    endTurn();
+    await endTurn();
   }, [endTurn]);
 
   const scores = getScores();
-  const isMyTurn = currentPlayer?.id === `player_${context?.fid}`;
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-game-dark">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          className="text-6xl mb-4"
+        >
+          🍕
+        </motion.div>
+        <p className="text-gray-400">Loading game...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !gameState) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-game-dark p-4">
+        <div className="text-6xl mb-4">😕</div>
+        <p className="text-red-400 mb-4 text-center">{error}</p>
+        <motion.button
+          onClick={() => router.push('/')}
+          className="btn-secondary"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          Return Home
+        </motion.button>
+      </div>
+    );
+  }
+
+  // No game state yet
   if (!gameState) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-game-dark">
@@ -163,9 +169,22 @@ function GameContent() {
     <main className="min-h-screen relative overflow-hidden">
       <Background />
 
+      {/* Connection status banner */}
+      {connectionStatus !== 'connected' && (
+        <motion.div
+          className="fixed top-0 left-0 right-0 z-50 bg-yellow-500/90 text-black text-center py-2 text-sm font-medium"
+          initial={{ y: -40 }}
+          animate={{ y: 0 }}
+        >
+          {connectionStatus === 'connecting' && 'Connecting to server...'}
+          {connectionStatus === 'disconnected' && 'Connection lost. Reconnecting...'}
+          {connectionStatus === 'reconnecting' && 'Reconnecting...'}
+        </motion.div>
+      )}
+
       {/* Header */}
       <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-2 pt-3 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
-        <div className="flex items-center justify-between">
+        <div className={`flex items-center justify-between ${connectionStatus !== 'connected' ? 'mt-8' : ''}`}>
           <div className="text-sm">
             <span className="text-gray-400">Turn </span>
             <span className="font-bold text-white">{gameState.turnNumber}</span>
@@ -214,7 +233,7 @@ function GameContent() {
             currentPlayerId={currentPlayer?.id || ''}
             onEdgeClick={handleEdgeClick}
             canDrawEdge={canDrawEdge}
-            gridSize={4}
+            gridSize={gridSize}
           />
 
           {/* Moves remaining indicator */}
@@ -259,7 +278,7 @@ function GameContent() {
                 value={gameState.diceRoll}
                 isRolling={isRolling}
                 onRoll={handleRoll}
-                disabled={!isMyTurn}
+                disabled={!isMyTurn || connectionStatus !== 'connected'}
               />
             </div>
           )}
@@ -275,6 +294,7 @@ function GameContent() {
                 className="btn-secondary"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                disabled={connectionStatus !== 'connected'}
               >
                 End Turn
               </motion.button>
@@ -282,7 +302,7 @@ function GameContent() {
           )}
 
           {/* Waiting for opponent */}
-          {!isMyTurn && (
+          {!isMyTurn && !isGameOver && (
             <div className="text-center">
               <motion.p
                 className="text-gray-400"

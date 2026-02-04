@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import "./PizzaUUPSBase.sol";
 import "./interfaces/IPizzaToken.sol";
-import "./PizzaShapesStats.sol";
+import "./interfaces/IPizzaDotsStats.sol";
 
 /**
  * @title PizzaShapesSettlement
@@ -22,7 +22,7 @@ contract PizzaShapesSettlement is PizzaUUPSBase {
     IPizzaToken public pizza;
 
     // Stats contract for recording games
-    PizzaShapesStats public statsContract;
+    IPizzaDotsStats public statsContract;
 
     // Distribution percentages (basis points, 100 = 1%)
     uint256 public constant WINNER_BPS = 7700;      // 77%
@@ -76,7 +76,7 @@ contract PizzaShapesSettlement is PizzaUUPSBase {
         __PizzaUUPSBase_init(admin);
 
         pizza = IPizzaToken(pizzaToken);
-        statsContract = PizzaShapesStats(_statsContract);
+        statsContract = IPizzaDotsStats(_statsContract);
         weeklyVault = _weeklyVault;
         freeRollVault = _freeRollVault;
         charityWallet = _charityWallet;

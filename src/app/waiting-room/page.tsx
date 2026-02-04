@@ -9,7 +9,8 @@ import {
   Background,
   WalletDisplayCompact,
 } from '@/components';
-import { useWallet, useFarcaster, useMatchmaking } from '@/hooks';
+import { useWallet, useFarcaster } from '@/hooks';
+import { useRealtimeMatchmaking } from '@/hooks/useRealtimeMatchmaking';
 import { ENTRY_TIERS, Player } from '@/types';
 
 function WaitingRoomContent() {
@@ -39,9 +40,12 @@ function WaitingRoomContent() {
     matchId,
     isMatchReady,
     countdown,
+    queuePosition,
+    error,
+    connectionStatus,
     joinQueue,
     leaveQueue,
-  } = useMatchmaking(currentPlayer);
+  } = useRealtimeMatchmaking(currentPlayer);
 
   const currentTier = ENTRY_TIERS.find(t => t.id === tier);
 
@@ -79,6 +83,30 @@ function WaitingRoomContent() {
       {/* Main content */}
       <div className="pt-24 pb-32 px-2 min-h-[100svh] flex flex-col justify-center">
         <div className="w-full max-w-md mx-auto space-y-2">
+          {/* Error display */}
+          {error && (
+            <motion.div
+              className="bg-red-500/20 border border-red-500 rounded-xl p-3"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-red-400 text-sm">{error}</p>
+            </motion.div>
+          )}
+
+          {/* Connection status */}
+          {connectionStatus !== 'connected' && (
+            <motion.div
+              className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-3 text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <p className="text-yellow-400 text-sm">
+                {connectionStatus === 'connecting' ? 'Connecting to server...' : 'Reconnecting...'}
+              </p>
+            </motion.div>
+          )}
+
           {/* Status card */}
           <motion.div
             className="card text-center"
@@ -98,6 +126,11 @@ function WaitingRoomContent() {
                 <p className="text-gray-400 text-sm">
                   {currentTier?.label} tier - {currentTier?.description}
                 </p>
+                {queuePosition && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Your position: #{queuePosition}
+                  </p>
+                )}
                 <div className="mt-4 flex justify-center">
                   <motion.div
                     className="flex gap-1"

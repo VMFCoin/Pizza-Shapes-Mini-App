@@ -1,151 +1,310 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { PIZZA_TOKEN_ADDRESS } from '@/types';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useAccount, useConnect, useDisconnect, usePublicClient, useWalletClient } from 'wagmi';
+import { injected } from 'wagmi/connectors';
+import { parseUnits, formatUnits, encodeFunctionData, type Address } from 'viem';
+import sdk from '@farcaster/miniapp-sdk';
+import { PIZZA_TOKEN, CONTRACTS, BASE_MAINNET } from '@/lib/constants';
+import { ERC20_ABI, SETTLEMENT_ABI } from '@/lib/contractAbis';
+import { BASE_CHAIN_ID } from '@/lib/wagmi';
 
-// Simulated wallet hook for Farcaster Mini App
-// In production, this would integrate with wagmi/viem and the Farcaster frame wallet
+// Transaction states for UI feedback
+export type TransactionStatus =
+  | 'idle'
+  | 'pending_approval'
+  | 'approving'
+  | 'pending_confirmation'
+  | 'confirming'
+  | 'success'
+  | 'error';
+
+export interface TransactionState {
+  status: TransactionStatus;
+  hash?: `0x${string}`;
+  error?: string;
+}
 
 interface UseWalletReturn {
-  address: string | undefined;
-  balance: bigint;
+  // Connection state
+  address: Address | undefined;
   isConnected: boolean;
-  isLoading: boolean;
+  isConnecting: boolean;
+  chainId: number | undefined;
+
+  // Balance
+  balance: bigint;
+  formattedBalance: string;
+  isLoadingBalance: boolean;
+
+  // Connection actions
   connect: () => Promise<void>;
   disconnect: () => void;
-  approvePizza: (amount: bigint) => Promise<boolean>;
-  enterMatch: (matchId: string, amount: bigint) => Promise<boolean>;
+
+  // Token actions
   refreshBalance: () => Promise<void>;
+  approvePizza: (amount: bigint, spender?: Address) => Promise<TransactionState>;
+  checkAllowance: (spender?: Address) => Promise<bigint>;
+
+  // Match actions
+  enterMatch: (matchId: string, tier: number) => Promise<TransactionState>;
+
+  // Transaction state
+  txState: TransactionState;
+  resetTxState: () => void;
 }
 
 export function useWallet(): UseWalletReturn {
-  const [address, setAddress] = useState<string | undefined>(undefined);
+  // Wagmi hooks
+  const { address, isConnected, chainId } = useAccount();
+  const { connectAsync, isPending: isConnecting } = useConnect();
+  const { disconnectAsync } = useDisconnect();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+
+  // Local state
   const [balance, setBalance] = useState<bigint>(BigInt(0));
-  const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [txState, setTxState] = useState<TransactionState>({ status: 'idle' });
+  const [isFarcasterContext, setIsFarcasterContext] = useState(false);
 
-  // Simulate fetching balance
+  // Check if running in Farcaster Mini App
+  useEffect(() => {
+    const checkContext = async () => {
+      try {
+        const ctx = await sdk.context;
+        setIsFarcasterContext(!!ctx?.user);
+      } catch {
+        setIsFarcasterContext(false);
+      }
+    };
+    checkContext();
+  }, []);
+
+  // Format balance for display
+  const formattedBalance = useMemo(() => {
+    const value = Number(formatUnits(balance, 18));
+    if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
+    return value.toFixed(2);
+  }, [balance]);
+
+  // Fetch $PIZZA balance
   const refreshBalance = useCallback(async () => {
-    if (!address) return;
+    if (!address || !publicClient) return;
 
-    setIsLoading(true);
+    setIsLoadingBalance(true);
     try {
-      // In production, fetch actual $PIZZA balance from Base mainnet
-      // const provider = new ethers.JsonRpcProvider('https://mainnet.base.org');
-      // const tokenContract = new ethers.Contract(PIZZA_TOKEN_ADDRESS, ERC20_ABI, provider);
-      // const balance = await tokenContract.balanceOf(address);
-
-      // Simulated balance for demo
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setBalance(BigInt(1000) * BigInt(10 ** 18)); // 1000 PIZZA tokens
+      const balanceResult = await publicClient.readContract({
+        address: PIZZA_TOKEN as Address,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [address],
+      });
+      setBalance(balanceResult as bigint);
     } catch (error) {
       console.error('Failed to fetch balance:', error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingBalance(false);
     }
-  }, [address]);
+  }, [address, publicClient]);
 
+  // Connect wallet
   const connect = useCallback(async () => {
-    setIsLoading(true);
     try {
-      // In production, this would use Farcaster frame wallet or wagmi
-      // For now, simulate connection
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Simulated address
-      const simulatedAddress = '0x' + Array(40).fill(0).map(() =>
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('');
-
-      setAddress(simulatedAddress);
-      setIsConnected(true);
+      // In Farcaster Mini App context, use the injected wallet
+      await connectAsync({
+        connector: injected(),
+        chainId: BASE_CHAIN_ID,
+      });
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+  }, [connectAsync]);
 
-  const disconnect = useCallback(() => {
-    setAddress(undefined);
-    setBalance(BigInt(0));
-    setIsConnected(false);
-  }, []);
-
-  const approvePizza = useCallback(async (amount: bigint): Promise<boolean> => {
-    if (!isConnected || !address) return false;
-
-    setIsLoading(true);
+  // Disconnect wallet
+  const disconnect = useCallback(async () => {
     try {
-      // In production:
-      // const signer = await provider.getSigner();
-      // const tokenContract = new ethers.Contract(PIZZA_TOKEN_ADDRESS, ERC20_ABI, signer);
-      // const tx = await tokenContract.approve(GAME_CONTRACT_ADDRESS, amount);
-      // await tx.wait();
-
-      // Simulate approval
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log(`Approved ${amount} PIZZA tokens`);
-      return true;
+      await disconnectAsync();
+      setBalance(BigInt(0));
     } catch (error) {
-      console.error('Failed to approve PIZZA:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to disconnect:', error);
     }
-  }, [isConnected, address]);
+  }, [disconnectAsync]);
 
-  const enterMatch = useCallback(async (matchId: string, amount: bigint): Promise<boolean> => {
-    if (!isConnected || !address) return false;
+  // Check token allowance
+  const checkAllowance = useCallback(async (spender?: Address): Promise<bigint> => {
+    if (!address || !publicClient) return BigInt(0);
 
-    setIsLoading(true);
+    const spenderAddress = spender || (CONTRACTS.settlement as Address);
+
     try {
-      // In production:
-      // const signer = await provider.getSigner();
-      // const gameContract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_ABI, signer);
-      // const tx = await gameContract.enterMatch(matchId, amount);
-      // await tx.wait();
-
-      // Simulate entering match
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log(`Entered match ${matchId} with ${amount} PIZZA tokens`);
-
-      // Update balance
-      setBalance(prev => prev - amount);
-      return true;
+      const allowance = await publicClient.readContract({
+        address: PIZZA_TOKEN as Address,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [address, spenderAddress],
+      });
+      return allowance as bigint;
     } catch (error) {
-      console.error('Failed to enter match:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to check allowance:', error);
+      return BigInt(0);
     }
-  }, [isConnected, address]);
+  }, [address, publicClient]);
+
+  // Approve $PIZZA spending
+  const approvePizza = useCallback(async (
+    amount: bigint,
+    spender?: Address
+  ): Promise<TransactionState> => {
+    if (!walletClient || !address || !publicClient) {
+      return { status: 'error', error: 'Wallet not connected' };
+    }
+
+    const spenderAddress = spender || (CONTRACTS.settlement as Address);
+    setTxState({ status: 'pending_approval' });
+
+    try {
+      // Check current allowance first
+      const currentAllowance = await checkAllowance(spenderAddress);
+      if (currentAllowance >= amount) {
+        setTxState({ status: 'success' });
+        return { status: 'success' };
+      }
+
+      setTxState({ status: 'approving' });
+
+      // Send approval transaction
+      const hash = await walletClient.writeContract({
+        address: PIZZA_TOKEN as Address,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [spenderAddress, amount],
+      });
+
+      setTxState({ status: 'confirming', hash });
+
+      // Wait for confirmation
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      if (receipt.status === 'success') {
+        setTxState({ status: 'success', hash });
+        return { status: 'success', hash };
+      } else {
+        setTxState({ status: 'error', error: 'Transaction failed' });
+        return { status: 'error', error: 'Transaction failed' };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setTxState({ status: 'error', error: errorMessage });
+      return { status: 'error', error: errorMessage };
+    }
+  }, [walletClient, address, publicClient, checkAllowance]);
+
+  // Enter match with entry fee
+  const enterMatch = useCallback(async (
+    matchId: string,
+    tier: number
+  ): Promise<TransactionState> => {
+    if (!walletClient || !address || !publicClient) {
+      return { status: 'error', error: 'Wallet not connected' };
+    }
+
+    // Calculate tier amount
+    const tierAmounts: Record<number, bigint> = {
+      1: parseUnits('0.25', 18),
+      2: parseUnits('0.5', 18),
+      3: parseUnits('1', 18),
+    };
+    const amount = tierAmounts[tier];
+    if (!amount) {
+      return { status: 'error', error: 'Invalid tier' };
+    }
+
+    // Check balance
+    if (balance < amount) {
+      return { status: 'error', error: 'Insufficient $PIZZA balance' };
+    }
+
+    setTxState({ status: 'pending_approval' });
+
+    try {
+      // Step 1: Approve if needed
+      const allowance = await checkAllowance(CONTRACTS.settlement as Address);
+      if (allowance < amount) {
+        const approvalResult = await approvePizza(amount, CONTRACTS.settlement as Address);
+        if (approvalResult.status === 'error') {
+          return approvalResult;
+        }
+      }
+
+      setTxState({ status: 'pending_confirmation' });
+
+      // Step 2: Convert matchId to bytes32
+      const matchIdBytes = matchId.startsWith('0x')
+        ? matchId as `0x${string}`
+        : `0x${matchId.padEnd(64, '0')}` as `0x${string}`;
+
+      // Step 3: Enter match
+      const hash = await walletClient.writeContract({
+        address: CONTRACTS.settlement as Address,
+        abi: SETTLEMENT_ABI,
+        functionName: 'enterMatch',
+        args: [matchIdBytes, tier],
+      });
+
+      setTxState({ status: 'confirming', hash });
+
+      // Wait for confirmation
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      if (receipt.status === 'success') {
+        // Refresh balance after successful entry
+        await refreshBalance();
+        setTxState({ status: 'success', hash });
+        return { status: 'success', hash };
+      } else {
+        setTxState({ status: 'error', error: 'Transaction failed' });
+        return { status: 'error', error: 'Transaction failed' };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setTxState({ status: 'error', error: errorMessage });
+      return { status: 'error', error: errorMessage };
+    }
+  }, [walletClient, address, publicClient, balance, checkAllowance, approvePizza, refreshBalance]);
+
+  // Reset transaction state
+  const resetTxState = useCallback(() => {
+    setTxState({ status: 'idle' });
+  }, []);
 
   // Auto-refresh balance when connected
   useEffect(() => {
     if (isConnected && address) {
       refreshBalance();
+      // Refresh every 30 seconds
+      const interval = setInterval(refreshBalance, 30000);
+      return () => clearInterval(interval);
     }
   }, [isConnected, address, refreshBalance]);
 
   return {
     address,
-    balance,
     isConnected,
-    isLoading,
+    isConnecting,
+    chainId,
+    balance,
+    formattedBalance,
+    isLoadingBalance,
     connect,
     disconnect,
-    approvePizza,
-    enterMatch,
     refreshBalance,
+    approvePizza,
+    checkAllowance,
+    enterMatch,
+    txState,
+    resetTxState,
   };
-}
-
-// Interface for external use
-export interface UseWallet {
-  address?: string;
-  balance: bigint;
-  approvePizza: (amount: bigint) => Promise<void>;
-  enterMatch: (amount: bigint) => Promise<void>;
 }

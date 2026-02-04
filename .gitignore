@@ -43,3 +43,10 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+.vercel
+.env*.local
+
+# Hardhat
+cache/
+artifacts/
+typechain-types/
