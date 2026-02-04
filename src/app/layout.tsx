@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Providers } from '@/providers';
 
 // Farcaster Mini App embed metadata
 const fcMiniApp = {
@@ -39,9 +40,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-game-dark text-white antialiased flex flex-col items-center px-2">
-        <div className="w-full max-w-md mx-auto">
-          {children}
-        </div>
+        <Providers>
+          <div className="w-full max-w-md mx-auto">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );
