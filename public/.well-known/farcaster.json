@@ -15,26 +15,24 @@
     "splashBackgroundColor": "#1A1A2E",
     "webhookUrl": "https://pizza-shapes-mini-app.vercel.app/api/webhook",
     "subtitle": "Dots in. Slices out.",
-    "description": "PIZZA DOTS is a fast-paced arcade puzzle where every dot matters. Connect colorful dots to form perfect pizza slices, chain clean lines, and push for max score before the board locks you out.",
+    "description": "Fast arcade puzzle: connect dots into pizza slices, chain clean lines, and chase high scores before the board locks.",
     "screenshotUrls": [
       "https://pizza-shapes-mini-app.vercel.app/screenshot1.png",
       "https://pizza-shapes-mini-app.vercel.app/screenshot2.png",
       "https://pizza-shapes-mini-app.vercel.app/screenshot3.png"
     ],
-    "primaryCategory": "Games",
+    "primaryCategory": "games",
     "tags": [
       "pizza",
       "dots",
       "arcade",
       "skill",
-      "high-score",
-      "fast-paced",
-      "farcaster"
+      "high-score"
     ],
     "heroImageUrl": "https://pizza-shapes-mini-app.vercel.app/hero.png",
     "tagline": "Every dot is a slice.",
     "ogTitle": "PIZZA DOTS",
-    "ogDescription": "A competitive arcade puzzle where sharp connections turn dots into pizza slices. No RNG. No mercy. Just clean lines and high scores.",
+    "ogDescription": "Connect dots into pizza slices. Skill-based combos, no RNG—just high scores.",
     "ogImageUrl": "https://pizza-shapes-mini-app.vercel.app/og.png"
   }
 }
