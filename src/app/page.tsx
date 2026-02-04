@@ -20,7 +20,7 @@ const DOT_COLORS = ['#FF6B6B', '#4ECDC4', '#F7DC6F', '#BB8FCE', '#58D68D', '#5DA
 
 export default function HomePage() {
   const router = useRouter();
-  const { address, balance, isConnected, connect, isLoading } = useWallet();
+  const { address, balance, isConnected, connect, isConnecting } = useWallet();
   const { context, viewToken } = useFarcaster();
 
   const [selectedTier, setSelectedTier] = useState(2);
@@ -169,7 +169,7 @@ export default function HomePage() {
             <EntryTierSelector
               selectedTier={selectedTier}
               onSelectTier={setSelectedTier}
-              disabled={isLoading}
+              disabled={isConnecting}
             />
             <PrizeBreakdown entryAmount={currentTier.amount} />
           </motion.div>
@@ -279,7 +279,7 @@ export default function HomePage() {
           <div className="space-y-3">
             <motion.button
               onClick={handlePlayNow}
-              disabled={isLoading}
+              disabled={isConnecting}
               className="w-full py-4 rounded-xl font-bold text-lg text-white"
               style={{
                 background: 'linear-gradient(135deg, #FF6B6B, #F7DC6F, #4ECDC4)',
@@ -288,7 +288,7 @@ export default function HomePage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {isLoading ? (
+              {isConnecting ? (
                 <span className="flex items-center justify-center gap-2">
                   <motion.span
                     animate={{ rotate: 360 }}
