@@ -48,7 +48,7 @@ export default function HomePage() {
 
       {/* Vertically centered content */}
       <div className="relative z-10 min-h-[100svh] flex flex-col justify-center px-2 py-10 safe-area-top safe-area-bottom">
-        <div className="w-full max-w-md mx-auto space-y-4">
+        <div className="w-full max-w-md mx-auto" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Hero Section */}
           <motion.div
             className="text-center mb-6"
@@ -120,7 +120,7 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-3 gap-2 text-center">
               <div className="flex flex-col items-center gap-2">
                 <div className="flex gap-1">
                   {[0, 1].map((i) => (
@@ -186,7 +186,7 @@ export default function HomePage() {
               <span className="text-lg">{"💡"}</span>
               How to Play
             </h3>
-            <ol className="space-y-3 text-sm">
+            <ol className="space-y-4 text-sm">
               {[
                 { color: '#FF6B6B', text: 'Roll the dice to determine your moves' },
                 { color: '#FFE066', text: 'Draw lines between dots (any direction)' },
@@ -196,7 +196,7 @@ export default function HomePage() {
               ].map((item, i) => (
                 <motion.li 
                   key={i} 
-                  className="flex gap-3 items-center"
+                  className="flex gap-2 items-center"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + i * 0.1 }}
@@ -227,7 +227,7 @@ export default function HomePage() {
             >
               <button
                 onClick={() => viewProfile(context.fid)}
-                className="flex items-center gap-3 mb-4 w-full text-left hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 mb-4 w-full text-left hover:opacity-80 transition-opacity"
               >
                 <img
                   src={context.pfpUrl}
@@ -282,11 +282,11 @@ export default function HomePage() {
           )}
 
           {/* Action Buttons - 3D keycap style */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-4 pt-4">
             <motion.button
               onClick={handlePlayNow}
               disabled={isConnecting}
-              className="w-full btn-primary py-4 text-lg disabled:opacity-50"
+              className="w-full btn-primary py-4 text-lg disabled:opacity-50 mb-6"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -307,7 +307,7 @@ export default function HomePage() {
               )}
             </motion.button>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4 mt-4">
               <motion.button
                 onClick={() => setShowFreeRoll(true)}
                 className="flex-1 keycap-secondary py-3 text-sm flex items-center justify-center gap-2"

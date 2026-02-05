@@ -219,7 +219,7 @@ function WaitingRoomContent() {
               <span className="text-xs text-stone-400">Min {currentTier?.minPlayers || 2} to start</span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <AnimatePresence mode="popLayout">
                 {queuePlayers.map((player, index) => (
                   <motion.div
@@ -268,7 +268,7 @@ function WaitingRoomContent() {
             <h4 className="font-bold mb-3 text-sm text-game-light flex items-center gap-2">
               <span>{"💡"}</span> Pro Tips
             </h4>
-            <ul className="text-xs text-stone-400 space-y-2">
+            <ul className="text-xs text-stone-400 space-y-4">
               {[
                 { color: '#FF6B6B', text: 'Complete triangles to capture pizza slices' },
                 { color: '#4ECDC4', text: 'Capturing gives you an extra turn!' },
@@ -290,7 +290,7 @@ function WaitingRoomContent() {
 
       {/* Bottom action bar - Keycap buttons */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-3 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
-        <div className="card p-4 space-y-3">
+        <div className="card p-4 space-y-4">
           {/* Payment status message */}
           {isPaymentLoading(paymentState.step) && (
             <motion.div

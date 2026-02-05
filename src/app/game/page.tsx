@@ -278,7 +278,7 @@ function GameContent() {
         </motion.div>
 
         {/* Score summary - Keycap style pills */}
-        <div className="mt-5 flex gap-3">
+        <div className="mt-5 flex gap-2">
           {gameState.players.map((player) => (
             <motion.div
               key={player.id}
@@ -319,7 +319,7 @@ function GameContent() {
 
           {/* Drawing phase */}
           {gamePhase === 'drawing' && isMyTurn && (
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-2">
               <div className="flex items-center gap-2">
                 <span 
                   className="number-badge"

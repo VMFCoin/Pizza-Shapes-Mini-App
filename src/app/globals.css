@@ -140,6 +140,14 @@ body {
 }
 
 /* 3D Keycap/Button Style - Inspired by playful keycaps */
+.keycap,
+.keycap-primary,
+.keycap-secondary,
+.keycap-teal,
+.keycap-red {
+  margin-bottom: 8px; /* Account for 3D shadow effect */
+}
+
 .keycap {
   position: relative;
   background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F4 100%);
@@ -147,7 +155,7 @@ body {
   padding: 12px 20px;
   font-weight: 700;
   color: var(--game-dark);
-  box-shadow: 
+  box-shadow:
     0 4px 0 0 #D6D3D1,
     0 6px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -245,13 +253,14 @@ body {
   border-radius: 14px;
   font-weight: 700;
   color: white;
-  box-shadow: 
+  box-shadow:
     0 4px 0 0 #CC5429,
     0 6px 16px rgba(255, 107, 53, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition: all 0.1s ease;
   transform: translateY(0);
   border: none;
+  margin-bottom: 8px; /* Account for 3D shadow effect */
 }
 
 .btn-primary:hover {
@@ -277,6 +286,7 @@ body {
   border-radius: 14px;
   font-weight: 600;
   color: #FAFAF9;
+  margin-bottom: 8px; /* Account for 3D shadow effect */
   box-shadow: 
     0 4px 0 0 #1C1917,
     0 6px 12px rgba(0, 0, 0, 0.25),

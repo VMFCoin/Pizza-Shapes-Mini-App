@@ -22,7 +22,7 @@ export function EntryTierSelector({
   disabled = false,
 }: EntryTierSelectorProps) {
   return (
-    <div className="w-full max-w-md">
+    <div className="card w-full max-w-md">
       <h3 className="text-base font-bold text-game-light mb-4 text-center">
         Select Entry Tier
       </h3>

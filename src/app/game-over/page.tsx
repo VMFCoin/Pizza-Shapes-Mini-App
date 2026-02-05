@@ -175,7 +175,7 @@ function GameOverContent() {
         >
           <div className="text-center mb-4">
             <p className="text-sm text-stone-400 mb-3">{"🎉"} Winner</p>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-2">
               <img
                 src={winner.pfpUrl}
                 alt={winner.displayName}
@@ -223,11 +223,11 @@ function GameOverContent() {
           transition={{ delay: 0.3 }}
         >
           <h3 className="font-bold mb-4 text-game-light">{"🏅"} Final Standings</h3>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {rankedPlayers.map((player, index) => (
               <motion.div
                 key={player.id}
-                className="flex items-center gap-3 p-2 rounded-xl"
+                className="flex items-center gap-2 p-2 rounded-xl"
                 style={{
                   background: index === 0 ? 'rgba(255, 179, 71, 0.1)' : 'rgba(255, 255, 255, 0.03)',
                   border: index === 0 ? '1px solid rgba(255, 179, 71, 0.2)' : 'none',
@@ -277,7 +277,7 @@ function GameOverContent() {
           transition={{ delay: 0.5 }}
         >
           <h3 className="font-bold mb-4 text-game-light">{"📊"} Match Stats</h3>
-          <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="grid grid-cols-3 gap-2 text-center">
             {[
               { value: Object.values(demoResults.scores).reduce((a, b) => a + b, 0), label: 'Total Slices', color: '#FF6B35' },
               { value: demoResults.players.length, label: 'Players', color: '#4ECDC4' },
@@ -308,7 +308,7 @@ function GameOverContent() {
           transition={{ delay: 0.6 }}
         >
           <h3 className="font-bold mb-3 text-game-light">{"💰"} Prize Distribution</h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-4 text-sm">
             {[
               { emoji: '🏆', label: 'Match Winner (77%)', value: formatPrize((demoResults.prize * BigInt(77)) / BigInt(100)), highlight: true },
               { emoji: '🎖️', label: 'Weekly Pool (10%)', value: formatPrize((demoResults.prize * BigInt(10)) / BigInt(100)) },
@@ -330,7 +330,7 @@ function GameOverContent() {
 
       {/* Bottom actions - Keycap buttons */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-3 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
-        <div className="card p-4 space-y-3">
+        <div className="card p-4 space-y-4">
           <motion.button
             onClick={handleShare}
             className={`w-full btn-primary py-4 text-base ${hasShared ? 'opacity-50' : ''}`}
@@ -341,7 +341,7 @@ function GameOverContent() {
             {hasShared ? '✓ Shared!' : '📣 Share Result'}
           </motion.button>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <motion.button
               onClick={handlePlayAgain}
               className="flex-1 keycap-teal py-3 text-sm"

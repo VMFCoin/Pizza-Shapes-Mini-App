@@ -147,7 +147,7 @@ export default function LeaderboardPage() {
               >
               {/* Top 3 podium - Keycap style */}
               {currentData.length >= 3 && (
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   {/* 2nd place */}
                   <motion.div
                     className="card text-center pt-6"
@@ -244,12 +244,12 @@ export default function LeaderboardPage() {
               )}
 
               {/* Full leaderboard list - Keycap style rows */}
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {currentData.slice(3).map((entry, index) => (
                   <motion.button
                     key={entry.player.id}
                     onClick={() => handlePlayerClick(entry)}
-                    className="w-full card flex items-center gap-3 hover:scale-[1.01] transition-transform"
+                    className="w-full card flex items-center gap-2 hover:scale-[1.01] transition-transform"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 * index }}
@@ -300,7 +300,7 @@ export default function LeaderboardPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <div 
                       className="number-badge"
                       style={{
