@@ -235,16 +235,17 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const joinQueue = useCallback(async (tier: number, player: Player) => {
     if (isInQueue || !player) return;
 
-    if (!isSupabaseAvailable()) {
-      setError('Connection not ready. Please refresh the page.');
-      return;
-    }
-
     setError(null);
     setSelectedTier(tier);
 
     // Start countdown immediately (don't wait for database)
+    // This ensures countdown shows even if Supabase connection fails
     startCountdown(tier);
+
+    if (!isSupabaseAvailable()) {
+      setError('Connection not ready. Please refresh the page.');
+      return;
+    }
 
     try {
       // Ensure player exists in players table (upsert)
