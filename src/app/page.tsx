@@ -62,7 +62,7 @@ export default function HomePage() {
               transition={{ duration: 0.5, type: "spring" }}
               style={{ marginBottom: '6px' }}
             >
-              <DotText text="PIZZA" color="#FF6B35" size={3} />
+              <DotText text="PIZZA" color="#FFB347" dotColor="#FF6B6B" size={3} />
             </motion.div>
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -70,7 +70,7 @@ export default function HomePage() {
               transition={{ duration: 0.5, delay: 0.2, type: "spring" }}
               className="mb-4"
             >
-              <DotText text="DOTS" color="#4ECDC4" size={3} />
+              <DotText text="DOTS" color="#5DADE2" dotColor="#BB8FCE" size={3} />
             </motion.div>
 
             <p className="text-base text-stone-300 leading-relaxed">
