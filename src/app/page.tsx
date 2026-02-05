@@ -252,7 +252,8 @@ export default function HomePage() {
             <motion.button
               onClick={handlePlayNow}
               disabled={isConnecting}
-              className="w-full btn-primary py-4 text-lg disabled:opacity-50 mb-6"
+              className="w-full btn-primary text-sm disabled:opacity-50"
+              style={{ padding: '8px 16px' }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -273,7 +274,7 @@ export default function HomePage() {
               )}
             </motion.button>
 
-            <div className="flex gap-4 mt-4">
+            <div className="flex gap-4" style={{ marginTop: '16px' }}>
               <motion.button
                 onClick={() => setShowFreeRoll(true)}
                 className="flex-1 keycap-secondary py-3 text-sm flex items-center justify-center gap-2"
