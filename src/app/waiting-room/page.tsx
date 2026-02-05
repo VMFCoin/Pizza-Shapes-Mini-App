@@ -189,8 +189,8 @@ function WaitingRoomContent() {
             transition={{ delay: 0.1 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Players ({queuePlayers.length}/6)</h3>
-              <span className="text-xs text-gray-400">Min 2 players to start</span>
+              <h3 className="font-semibold">Players ({queuePlayers.length}/{currentTier?.maxPlayers || 2})</h3>
+              <span className="text-xs text-gray-400">Min {currentTier?.minPlayers || 2} players to start</span>
             </div>
 
             <div className="space-y-3">
@@ -217,7 +217,7 @@ function WaitingRoomContent() {
               </AnimatePresence>
 
               {/* Empty slots */}
-              {Array.from({ length: 6 - queuePlayers.length }).map((_, i) => (
+              {Array.from({ length: Math.max(0, (currentTier?.maxPlayers || 2) - queuePlayers.length) }).map((_, i) => (
                 <motion.div
                   key={`empty-${i}`}
                   className="p-3 rounded-xl border-2 border-dashed border-white/10 text-center"
