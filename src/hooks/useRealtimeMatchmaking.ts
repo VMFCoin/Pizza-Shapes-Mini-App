@@ -228,6 +228,9 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     setError(null);
     setSelectedTier(tier);
 
+    // Start countdown immediately (don't wait for database)
+    startCountdown(tier);
+
     try {
       // Ensure player exists in players table (upsert)
       // Cast to any to work around TypeScript's strict typing with Supabase
@@ -274,9 +277,6 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       // Subscribe to queue updates
       await subscribeToQueue(tier);
       await refreshQueuePlayers(tier);
-
-      // Start countdown immediately when joining
-      startCountdown(tier);
     } catch (err: any) {
       setError(err.message || 'Failed to join queue');
       console.error('Join queue error:', err);
