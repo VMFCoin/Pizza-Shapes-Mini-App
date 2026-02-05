@@ -10,10 +10,12 @@ interface UseFarcasterReturn {
   isLoading: boolean;
   isFrameContext: boolean;
   isReady: boolean;
+  isAppAdded: boolean;
   viewToken: (tokenAddress?: string) => void;
   composeCast: (text: string, embeds?: string[]) => void;
   viewProfile: (fid: number) => void;
-  addMiniApp: () => Promise<void>;
+  addMiniApp: () => Promise<boolean>;
+  promptAddMiniAppIfNeeded: () => Promise<void>;
   shareInvite: () => void;
   shareMatchWin: (matchId: string, slicesWon: number, prize: bigint) => void;
   shareFreeRollWin: (prize: bigint) => void;
@@ -34,6 +36,7 @@ export function useFarcaster(): UseFarcasterReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [isFrameContext, setIsFrameContext] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isAppAdded, setIsAppAdded] = useState(false);
 
   // Initialize Farcaster SDK
   useEffect(() => {
@@ -54,6 +57,10 @@ export function useFarcaster(): UseFarcasterReturn {
               pfpUrl: ctx.user.pfpUrl || '',
               username: ctx.user.username,
             });
+
+            // Check if app is already added via client.added
+            const clientAdded = (ctx as any).client?.added;
+            setIsAppAdded(!!clientAdded);
 
             // Signal ready to Farcaster - this dismisses the splash screen
             sdk.actions.ready();
@@ -140,16 +147,35 @@ export function useFarcaster(): UseFarcasterReturn {
   }, [isFrameContext]);
 
   // Prompt user to add the mini app
-  const addMiniApp = useCallback(async () => {
-    if (isFrameContext) {
-      try {
-        await sdk.actions.addMiniApp();
-      } catch (error) {
-        // User rejected or domain mismatch
+  const addMiniApp = useCallback(async (): Promise<boolean> => {
+    if (!isFrameContext) return false;
+
+    try {
+      await sdk.actions.addMiniApp();
+      setIsAppAdded(true);
+      return true;
+    } catch (error: any) {
+      // User rejected or domain mismatch
+      if (error?.message?.includes('RejectedByUser')) {
+        console.log('User declined to add mini app');
+      } else if (error?.message?.includes('InvalidDomainManifestJson')) {
+        console.error('Domain mismatch or invalid manifest:', error);
+      } else {
         console.error('Failed to add mini app:', error);
       }
+      return false;
     }
   }, [isFrameContext]);
+
+  // Prompt to add mini app if not already added (call on first meaningful interaction)
+  const promptAddMiniAppIfNeeded = useCallback(async () => {
+    if (!isFrameContext || isAppAdded) return;
+
+    // Small delay to not interrupt the initial experience
+    setTimeout(async () => {
+      await addMiniApp();
+    }, 500);
+  }, [isFrameContext, isAppAdded, addMiniApp]);
 
   // Share invite to get others to play
   const shareInvite = useCallback(() => {
@@ -198,10 +224,12 @@ export function useFarcaster(): UseFarcasterReturn {
     isLoading,
     isFrameContext,
     isReady,
+    isAppAdded,
     viewToken,
     composeCast,
     viewProfile,
     addMiniApp,
+    promptAddMiniAppIfNeeded,
     shareInvite,
     shareMatchWin,
     shareFreeRollWin,

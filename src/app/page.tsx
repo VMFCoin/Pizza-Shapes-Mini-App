@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
@@ -21,8 +21,21 @@ const DOT_COLORS = ['#FF6B6B', '#4ECDC4', '#FFE066', '#BB8FCE', '#58D68D', '#5DA
 export default function HomePage() {
   const router = useRouter();
   const { address, isConnected, connect, isConnecting } = useWallet();
-  const { context, viewProfile } = useFarcaster();
+  const { context, viewProfile, isAppAdded, addMiniApp, isReady, isFrameContext } = useFarcaster();
   const { stats: onChainStats, isLoading: statsLoading } = useOnChainStats(address);
+  const hasPromptedRef = useRef(false);
+
+  // Prompt to add mini app when the app loads (if not already added)
+  useEffect(() => {
+    if (isReady && isFrameContext && !isAppAdded && !hasPromptedRef.current) {
+      hasPromptedRef.current = true;
+      // Small delay to let the UI render first
+      const timer = setTimeout(() => {
+        addMiniApp();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isReady, isFrameContext, isAppAdded, addMiniApp]);
 
   const [selectedTier, setSelectedTier] = useState(2);
   const [showFreeRoll, setShowFreeRoll] = useState(false);
