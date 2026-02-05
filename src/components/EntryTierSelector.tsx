@@ -3,6 +3,13 @@
 import { motion } from 'framer-motion';
 import { ENTRY_TIERS, EntryTier } from '@/types';
 
+// Tier colors for keycap styling
+const TIER_COLORS = {
+  1: { bg: '#4ECDC4', shadow: '#3EA89D', text: '#1C1917' }, // Teal - Starter
+  2: { bg: '#FFB347', shadow: '#CC8F39', text: '#1C1917' }, // Orange - Standard  
+  3: { bg: '#FF6B6B', shadow: '#CC5555', text: '#FFFFFF' }, // Red - Pro
+};
+
 interface EntryTierSelectorProps {
   selectedTier: number;
   onSelectTier: (tierId: number) => void;
@@ -16,7 +23,7 @@ export function EntryTierSelector({
 }: EntryTierSelectorProps) {
   return (
     <div className="w-full max-w-md">
-      <h3 className="text-lg font-semibold text-white mb-4 text-center">
+      <h3 className="text-base font-bold text-game-light mb-4 text-center">
         Select Entry Tier
       </h3>
       <div className="grid grid-cols-3 gap-3">
@@ -30,7 +37,7 @@ export function EntryTierSelector({
           />
         ))}
       </div>
-      <p className="text-xs text-gray-400 text-center mt-3">
+      <p className="text-xs text-stone-400 text-center mt-3">
         Higher stakes = bigger prizes!
       </p>
     </div>
@@ -48,89 +55,98 @@ function TierCard({
   onSelect: () => void;
   disabled: boolean;
 }) {
+  const colors = TIER_COLORS[tier.id as keyof typeof TIER_COLORS] || TIER_COLORS[1];
+  
   return (
     <motion.button
       onClick={onSelect}
       disabled={disabled}
-      className={`
-        relative p-4 rounded-xl text-center transition-all duration-200
-        ${isSelected
-          ? 'bg-gradient-to-br from-game-primary to-game-secondary text-white'
-          : 'bg-white/10 text-white hover:bg-white/20'
-        }
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-      `}
-      whileHover={!disabled ? { scale: 1.05 } : {}}
-      whileTap={!disabled ? { scale: 0.95 } : {}}
+      className="relative p-4 rounded-xl text-center"
+      style={isSelected ? {
+        background: `linear-gradient(180deg, ${colors.bg} 0%, ${colors.bg}DD 100%)`,
+        color: colors.text,
+        boxShadow: `0 4px 0 0 ${colors.shadow}, 0 6px 16px ${colors.bg}40`,
+        transform: 'translateY(0)',
+      } : {
+        background: 'linear-gradient(180deg, #44403C 0%, #292524 100%)',
+        color: '#A8A29E',
+        boxShadow: '0 3px 0 0 #1C1917, inset 0 1px 0 rgba(255,255,255,0.05)',
+      }}
+      whileHover={!disabled ? { 
+        scale: 1.05,
+        boxShadow: isSelected 
+          ? `0 4px 0 0 ${colors.shadow}, 0 8px 24px ${colors.bg}60`
+          : `0 4px 0 0 #1C1917, 0 6px 16px rgba(0,0,0,0.3)`,
+      } : {}}
+      whileTap={!disabled ? { 
+        scale: 0.98,
+        boxShadow: isSelected
+          ? `0 1px 0 0 ${colors.shadow}`
+          : '0 1px 0 0 #1C1917',
+      } : {}}
     >
-      {/* Glow effect on hover/selected */}
-      {isSelected && (
-        <motion.div
-          className="absolute inset-0 rounded-xl bg-game-primary/30 blur-xl -z-10"
-          animate={{ opacity: [0.5, 0.8, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-      )}
-
       {/* Tier amount */}
-      <p className="text-2xl font-bold">{tier.label}</p>
+      <p 
+        className="text-2xl font-bold"
+        style={{ fontFamily: 'var(--font-lilita), cursive' }}
+      >
+        {tier.label}
+      </p>
 
       {/* Board size */}
-      <p className={`text-xs mt-1 ${isSelected ? 'text-white/80' : 'text-gray-400'}`}>
+      <p className={`text-xs mt-1 font-medium ${isSelected ? 'opacity-90' : 'text-stone-500'}`}>
         {tier.gridSize}x{tier.gridSize} Board
       </p>
 
       {/* Player count */}
-      <p className={`text-xs ${isSelected ? 'text-white/60' : 'text-gray-500'}`}>
+      <p className={`text-xs ${isSelected ? 'opacity-70' : 'text-stone-600'}`}>
         {tier.minPlayers === tier.maxPlayers
           ? `${tier.maxPlayers} players`
           : `${tier.minPlayers}-${tier.maxPlayers} players`}
       </p>
 
-      {/* Selected indicator */}
+      {/* Selected indicator - keycap badge */}
       {isSelected && (
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          className="absolute -top-2 -right-2 w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(180deg, #58D68D 0%, #46AB71 100%)',
+            boxShadow: '0 2px 0 0 #2D7A4E',
+          }}
         >
-          <span className="text-white text-xs">✓</span>
+          <span className="text-white text-sm font-bold">{"✓"}</span>
         </motion.div>
       )}
     </motion.button>
   );
 }
 
-// Prize breakdown component
+// Prize breakdown component - Updated with keycap styling
 export function PrizeBreakdown({ entryAmount }: { entryAmount: number }) {
   const calculatePrize = (percentage: number) => {
     return (entryAmount * percentage / 100).toFixed(4);
   };
 
   return (
-    <div className="bg-white/5 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-white mb-3">Prize Distribution</h4>
+    <div className="card mt-4">
+      <h4 className="text-sm font-bold text-game-light mb-3">Prize Distribution</h4>
       <div className="space-y-2 text-xs">
-        <div className="flex justify-between text-gray-300">
-          <span>🏆 Winner (77%)</span>
-          <span className="text-game-secondary">${calculatePrize(77)}</span>
-        </div>
-        <div className="flex justify-between text-gray-300">
-          <span>🎖️ Weekly Top 3 (10%)</span>
-          <span>${calculatePrize(10)}</span>
-        </div>
-        <div className="flex justify-between text-gray-300">
-          <span>🎲 Daily Free Roll (3%)</span>
-          <span>${calculatePrize(3)}</span>
-        </div>
-        <div className="flex justify-between text-gray-300">
-          <span>🔥 Burned (7%)</span>
-          <span>${calculatePrize(7)}</span>
-        </div>
-        <div className="flex justify-between text-gray-300">
-          <span>🎗️ Charities (3%)</span>
-          <span>${calculatePrize(3)}</span>
-        </div>
+        {[
+          { emoji: '🏆', label: 'Winner (77%)', value: calculatePrize(77), highlight: true },
+          { emoji: '🎖️', label: 'Weekly Top 3 (10%)', value: calculatePrize(10) },
+          { emoji: '🎲', label: 'Daily Free Roll (3%)', value: calculatePrize(3) },
+          { emoji: '🔥', label: 'Burned (7%)', value: calculatePrize(7) },
+          { emoji: '🎗️', label: 'Charities (3%)', value: calculatePrize(3) },
+        ].map((item, i) => (
+          <div key={i} className="flex justify-between items-center">
+            <span className="text-stone-400">{item.emoji} {item.label}</span>
+            <span className={item.highlight ? 'text-game-secondary font-bold' : 'text-stone-300'}>
+              ${item.value}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

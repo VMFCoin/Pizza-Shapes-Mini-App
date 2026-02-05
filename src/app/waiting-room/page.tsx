@@ -106,8 +106,8 @@ function WaitingRoomContent() {
     <main className="min-h-[100svh] relative">
       <Background />
 
-      {/* Header */}
-      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-2 pt-4 safe-area-top">
+      {/* Header - Keycap style */}
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-3 pt-4 safe-area-top bg-gradient-to-b from-game-dark via-game-dark/80 to-transparent">
         <div className="flex items-center justify-between">
           <PizzaShapesLogo />
           <WalletDisplayCompact balance={balance} onViewToken={() => viewToken()} />
@@ -115,33 +115,42 @@ function WaitingRoomContent() {
       </header>
 
       {/* Main content */}
-      <div className="pt-24 pb-32 px-2 min-h-[100svh] flex flex-col justify-center">
-        <div className="w-full max-w-md mx-auto space-y-2">
-          {/* Error display */}
+      <div className="pt-24 pb-32 px-3 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-md mx-auto space-y-4">
+          {/* Error display - Keycap style */}
           {error && (
             <motion.div
-              className="bg-red-500/20 border border-red-500 rounded-xl p-3"
+              className="rounded-xl p-3"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 107, 107, 0.1) 100%)',
+                border: '1px solid rgba(255, 107, 107, 0.4)',
+                boxShadow: '0 2px 0 0 rgba(204, 85, 85, 0.3)',
+              }}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <p className="text-red-400 text-sm">{error}</p>
+              <p className="text-red-400 text-sm font-medium">{error}</p>
             </motion.div>
           )}
 
-          {/* Connection status */}
+          {/* Connection status - Keycap banner */}
           {connectionStatus !== 'connected' && (
             <motion.div
-              className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-3 text-center"
+              className="rounded-xl p-3 text-center"
+              style={{
+                background: 'linear-gradient(180deg, #FFE066 0%, #FFD426 100%)',
+                boxShadow: '0 2px 0 0 #CCB352',
+              }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <p className="text-yellow-400 text-sm">
+              <p className="text-game-dark text-sm font-bold">
                 {connectionStatus === 'connecting' ? 'Connecting to server...' : 'Reconnecting...'}
               </p>
             </motion.div>
           )}
 
-          {/* Status card */}
+          {/* Status card - Main keycap card */}
           <motion.div
             className="card text-center"
             initial={{ opacity: 0, y: 20 }}
@@ -149,29 +158,46 @@ function WaitingRoomContent() {
           >
             <motion.div
               className="text-6xl mb-4"
-              animate={{ rotate: [0, 10, -10, 0] }}
+              animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              🍕
+              {"🍕"}
             </motion.div>
-            <h2 className="text-xl font-bold mb-2">
+            <h2 
+              className="text-xl font-bold mb-2 text-game-light"
+              style={{ fontFamily: 'var(--font-lilita), cursive' }}
+            >
               {countdown !== null && countdown > 0
                 ? `Game starts in ${countdown}s`
                 : countdown === 0
-                  ? (isCurrentPlayerReady ? 'Starting...' : 'Time\'s up!')
+                  ? (isCurrentPlayerReady ? 'Starting...' : "Time's up!")
                   : 'Finding Players...'}
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-stone-400 text-sm">
               {currentTier?.label} tier - {currentTier?.description}
             </p>
             {readyPlayerCount > 0 && (
-              <p className="text-xs text-green-400 mt-2">
+              <div 
+                className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-lg text-xs font-bold"
+                style={{
+                  background: 'linear-gradient(180deg, #58D68D 0%, #46AB71 100%)',
+                  boxShadow: '0 2px 0 0 #2D7A4E',
+                  color: '#FFF',
+                }}
+              >
+                <span>{"✓"}</span>
                 {readyPlayerCount} player{readyPlayerCount !== 1 ? 's' : ''} ready
-              </p>
+              </div>
             )}
             {countdown !== null && countdown > 0 && (
               <motion.div
-                className="mt-4 text-4xl font-bold text-game-secondary"
+                className="mt-4 inline-flex items-center justify-center w-16 h-16 rounded-xl text-3xl font-bold"
+                style={{
+                  background: 'linear-gradient(180deg, #FFC875 0%, #FFB347 100%)',
+                  boxShadow: '0 4px 0 0 #CC8F39, 0 6px 16px rgba(255, 179, 71, 0.3)',
+                  color: '#1C1917',
+                  fontFamily: 'var(--font-lilita), cursive',
+                }}
                 key={countdown}
                 initial={{ scale: 1.3, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -189,8 +215,8 @@ function WaitingRoomContent() {
             transition={{ delay: 0.1 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Players ({queuePlayers.length}/{currentTier?.maxPlayers || 2})</h3>
-              <span className="text-xs text-gray-400">Min {currentTier?.minPlayers || 2} players to start</span>
+              <h3 className="font-bold text-game-light">Players ({queuePlayers.length}/{currentTier?.maxPlayers || 2})</h3>
+              <span className="text-xs text-stone-400">Min {currentTier?.minPlayers || 2} to start</span>
             </div>
 
             <div className="space-y-3">
@@ -216,78 +242,104 @@ function WaitingRoomContent() {
                 ))}
               </AnimatePresence>
 
-              {/* Empty slots */}
+              {/* Empty slots - Dashed keycap style */}
               {Array.from({ length: Math.max(0, (currentTier?.maxPlayers || 2) - queuePlayers.length) }).map((_, i) => (
                 <motion.div
                   key={`empty-${i}`}
-                  className="p-3 rounded-xl border-2 border-dashed border-white/10 text-center"
+                  className="p-3 rounded-xl border-2 border-dashed border-stone-700 text-center"
+                  style={{ background: 'rgba(41, 37, 36, 0.3)' }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 + i * 0.1 }}
                 >
-                  <p className="text-gray-500 text-sm">Waiting for player...</p>
+                  <p className="text-stone-500 text-sm">Waiting for player...</p>
                 </motion.div>
               ))}
             </div>
           </motion.div>
 
-          {/* Tips */}
+          {/* Tips - Keycap card */}
           <motion.div
             className="card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <h4 className="font-semibold mb-2 text-sm">💡 Pro Tips</h4>
-            <ul className="text-xs text-gray-400 space-y-1">
-              <li>• Complete triangles to capture pizza slices</li>
-              <li>• Capturing gives you an extra turn!</li>
-              <li>• Diagonal lines open up more possibilities</li>
-              <li>• Watch out for setups from other players</li>
+            <h4 className="font-bold mb-3 text-sm text-game-light flex items-center gap-2">
+              <span>{"💡"}</span> Pro Tips
+            </h4>
+            <ul className="text-xs text-stone-400 space-y-2">
+              {[
+                { color: '#FF6B6B', text: 'Complete triangles to capture pizza slices' },
+                { color: '#4ECDC4', text: 'Capturing gives you an extra turn!' },
+                { color: '#FFE066', text: 'Diagonal lines open up more possibilities' },
+                { color: '#BB8FCE', text: 'Watch out for setups from other players' },
+              ].map((tip, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <span 
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: tip.color }}
+                  />
+                  {tip.text}
+                </li>
+              ))}
             </ul>
           </motion.div>
         </div>
       </div>
 
-      {/* Bottom action bar */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-2 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
-        <div className="space-y-3">
+      {/* Bottom action bar - Keycap buttons */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-3 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+        <div className="card p-4 space-y-3">
           {/* Payment status message */}
           {isPaymentLoading(paymentState.step) && (
             <motion.div
-              className="bg-game-primary/20 rounded-xl p-3 text-center"
+              className="rounded-xl p-3 text-center"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255, 107, 53, 0.2) 0%, rgba(255, 107, 53, 0.1) 100%)',
+                border: '1px solid rgba(255, 107, 53, 0.3)',
+              }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <p className="text-sm text-white">{getPaymentStepMessage(paymentState.step)}</p>
+              <p className="text-sm text-game-light font-medium">{getPaymentStepMessage(paymentState.step)}</p>
             </motion.div>
           )}
 
           {paymentState.step === 'error' && (
             <motion.div
-              className="bg-red-500/20 rounded-xl p-3 text-center"
+              className="rounded-xl p-3 text-center"
+              style={{
+                background: 'rgba(255, 107, 107, 0.15)',
+                border: '1px solid rgba(255, 107, 107, 0.3)',
+              }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <p className="text-sm text-red-400">{paymentState.error}</p>
+              <p className="text-sm text-red-400 font-medium">{paymentState.error}</p>
             </motion.div>
           )}
 
-          {/* Enter Game / Ready button */}
+          {/* Enter Game / Ready button - Keycap style */}
           {isCurrentPlayerReady ? (
             <motion.div
-              className="w-full py-4 rounded-xl font-bold text-lg text-center bg-green-500/20 border-2 border-green-500 text-green-400"
+              className="w-full py-4 rounded-xl font-bold text-lg text-center"
+              style={{
+                background: 'linear-gradient(180deg, #58D68D 0%, #46AB71 100%)',
+                boxShadow: '0 3px 0 0 #2D7A4E, 0 4px 12px rgba(88, 214, 141, 0.3)',
+                color: '#FFF',
+              }}
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
             >
               <span className="flex items-center justify-center gap-2">
-                <span>✓</span> Ready!
+                <span>{"✓"}</span> Ready!
               </span>
             </motion.div>
           ) : (
             <motion.button
               onClick={handleEnterGame}
-              className="w-full btn-primary"
+              className="w-full btn-primary py-4 text-base"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isProcessingPayment || countdown === 0}
@@ -302,7 +354,7 @@ function WaitingRoomContent() {
           {!isCurrentPlayerReady && (
             <motion.button
               onClick={handleLeave}
-              className="w-full btn-secondary"
+              className="w-full btn-secondary py-3"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isProcessingPayment}
@@ -326,7 +378,7 @@ export default function WaitingRoomPage() {
             transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             className="text-6xl"
           >
-            🍕
+            {"🍕"}
           </motion.div>
         </div>
       }

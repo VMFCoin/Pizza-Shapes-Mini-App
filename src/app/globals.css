@@ -1,10 +1,22 @@
 @import "tailwindcss";
 
 :root {
+  /* Warm Pizza Theme - Playful & Fun */
   --game-primary: #FF6B35;
-  --game-secondary: #F7C548;
-  --game-accent: #C41E3A;
-  --game-dark: #1A1A2E;
+  --game-secondary: #FFB347;
+  --game-accent: #E63946;
+  --game-dark: #1C1917;
+  --game-surface: #292524;
+  
+  /* Playful Dot Colors */
+  --dot-red: #FF6B6B;
+  --dot-teal: #4ECDC4;
+  --dot-yellow: #FFE066;
+  --dot-purple: #BB8FCE;
+  --dot-green: #58D68D;
+  --dot-blue: #5DADE2;
+  --dot-pink: #FF8FAB;
+  --dot-orange: #FFA94D;
 }
 
 * {
@@ -17,12 +29,11 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
 body {
   background-color: var(--game-dark);
-  color: white;
+  color: #FAFAF9;
 }
 
 /* Custom scrollbar */
@@ -31,7 +42,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
 }
 
@@ -75,6 +86,35 @@ body {
   }
 }
 
+@keyframes bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes dot-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
@@ -87,10 +127,98 @@ body {
   animation: shake 0.5s ease-in-out;
 }
 
-/* Glass effect */
+.animate-bounce-soft {
+  animation: bounce-soft 2s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 1s ease-in-out infinite;
+}
+
+.animate-dot-pulse {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+/* 3D Keycap/Button Style - Inspired by playful keycaps */
+.keycap {
+  position: relative;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F4 100%);
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 700;
+  color: var(--game-dark);
+  box-shadow: 
+    0 4px 0 0 #D6D3D1,
+    0 6px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.1s ease;
+  transform: translateY(0);
+}
+
+.keycap:hover {
+  transform: translateY(2px);
+  box-shadow: 
+    0 2px 0 0 #D6D3D1,
+    0 3px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.keycap:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0 0 0 0 #D6D3D1,
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Colorful Keycap Variants */
+.keycap-primary {
+  background: linear-gradient(180deg, #FF8C5A 0%, var(--game-primary) 100%);
+  color: white;
+  box-shadow: 
+    0 4px 0 0 #CC5429,
+    0 6px 12px rgba(255, 107, 53, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.keycap-primary:hover {
+  box-shadow: 
+    0 2px 0 0 #CC5429,
+    0 3px 6px rgba(255, 107, 53, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.keycap-secondary {
+  background: linear-gradient(180deg, #FFC875 0%, var(--game-secondary) 100%);
+  color: var(--game-dark);
+  box-shadow: 
+    0 4px 0 0 #CC8F39,
+    0 6px 12px rgba(255, 179, 71, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.keycap-teal {
+  background: linear-gradient(180deg, #6EE7DD 0%, var(--dot-teal) 100%);
+  color: var(--game-dark);
+  box-shadow: 
+    0 4px 0 0 #3EA89D,
+    0 6px 12px rgba(78, 205, 196, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.keycap-red {
+  background: linear-gradient(180deg, #FF8A8A 0%, var(--dot-red) 100%);
+  color: white;
+  box-shadow: 
+    0 4px 0 0 #CC5555,
+    0 6px 12px rgba(255, 107, 107, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Glass effect - updated for warmer theme */
 .glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(41, 37, 36, 0.8);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -102,65 +230,186 @@ body {
   background-clip: text;
 }
 
-/* Button styles */
+.gradient-text-fun {
+  background: linear-gradient(135deg, var(--dot-red) 0%, var(--game-primary) 25%, var(--game-secondary) 50%, var(--dot-teal) 75%, var(--dot-purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Button styles - Updated with 3D keycap feel */
 .btn-primary {
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(to right, var(--game-primary), var(--game-secondary));
-  border-radius: 0.75rem;
-  font-weight: 600;
+  position: relative;
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(180deg, #FF8C5A 0%, var(--game-primary) 100%);
+  border-radius: 14px;
+  font-weight: 700;
   color: white;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
+  box-shadow: 
+    0 4px 0 0 #CC5429,
+    0 6px 16px rgba(255, 107, 53, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.1s ease;
+  transform: translateY(0);
+  border: none;
 }
 
 .btn-primary:hover {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(2px);
+  box-shadow: 
+    0 2px 0 0 #CC5429,
+    0 3px 8px rgba(255, 107, 53, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btn-primary:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0 0 0 0 #CC5429,
+    0 1px 4px rgba(255, 107, 53, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-secondary {
-  padding: 0.75rem 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
+  position: relative;
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(180deg, #44403C 0%, #292524 100%);
+  border-radius: 14px;
   font-weight: 600;
-  color: white;
-  transition: all 0.2s;
+  color: #FAFAF9;
+  box-shadow: 
+    0 4px 0 0 #1C1917,
+    0 6px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.1s ease;
+  transform: translateY(0);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(2px);
+  box-shadow: 
+    0 2px 0 0 #1C1917,
+    0 3px 6px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Card styles */
+.btn-secondary:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0 0 0 0 #1C1917,
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Card styles - Warm & Cozy */
 .card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 1rem;
-  padding: 1rem;
-  backdrop-filter: blur(4px);
+  background: linear-gradient(180deg, rgba(41, 37, 36, 0.95) 0%, rgba(28, 25, 23, 0.95) 100%);
+  border-radius: 20px;
+  padding: 1.25rem;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.card-elevated {
+  background: linear-gradient(180deg, #3D3835 0%, #292524 100%);
+  border-radius: 20px;
+  padding: 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 0 0 #1C1917,
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Fun Dot decoration */
+.dot-decoration {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 
+    0 2px 0 0 rgba(0, 0, 0, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+/* Pizza Slice shape for decorations */
+.pizza-slice {
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 35px solid var(--game-secondary);
+  position: relative;
+}
+
+.pizza-slice::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: -12px;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-bottom: 22px solid var(--game-primary);
+  border-radius: 0 0 50% 50%;
 }
 
 /* Safe area for mobile */
 .safe-area-top {
-  /* Keep a baseline padding even when inset is 0 */
   padding-top: calc(env(safe-area-inset-top) + 1rem);
 }
 
 .safe-area-bottom {
-  /* Keep a baseline padding even when inset is 0 */
   padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+
+/* Number badge - playful keycap style */
+.number-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F4 100%);
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--game-dark);
+  box-shadow: 
+    0 2px 0 0 #D6D3D1,
+    0 3px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 /* Custom colors for Tailwind v4 */
 @theme {
+  --font-sans: 'Nunito', 'Nunito Fallback', system-ui, sans-serif;
+  --font-display: 'Lilita One', 'Lilita One Fallback', cursive;
+  
   --color-game-primary: #FF6B35;
-  --color-game-secondary: #F7C548;
-  --color-game-accent: #C41E3A;
-  --color-game-dark: #1A1A2E;
-  --color-game-light: #EAEAEA;
+  --color-game-secondary: #FFB347;
+  --color-game-accent: #E63946;
+  --color-game-dark: #1C1917;
+  --color-game-surface: #292524;
+  --color-game-light: #FAFAF9;
+  
+  --color-dot-red: #FF6B6B;
+  --color-dot-teal: #4ECDC4;
+  --color-dot-yellow: #FFE066;
+  --color-dot-purple: #BB8FCE;
+  --color-dot-green: #58D68D;
+  --color-dot-blue: #5DADE2;
+  --color-dot-pink: #FF8FAB;
+  --color-dot-orange: #FFA94D;
+  
   --color-pizza-crust: #D4A574;
-  --color-pizza-sauce: #C41E3A;
-  --color-pizza-cheese: #FFD700;
-  --color-pizza-pepperoni: #8B0000;
-  --color-pizza-olive: #2F4F2F;
-  --color-pizza-mushroom: #D2B48C;
+  --color-pizza-sauce: #E63946;
+  --color-pizza-cheese: #FFE066;
+  --color-pizza-pepperoni: #C41E3A;
 }

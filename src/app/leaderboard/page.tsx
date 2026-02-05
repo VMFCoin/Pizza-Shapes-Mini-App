@@ -42,53 +42,86 @@ export default function LeaderboardPage() {
     <main className="min-h-[100svh] relative">
       <Background />
 
-      {/* Header */}
-      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-2 pt-4 safe-area-top bg-gradient-to-b from-game-dark to-transparent">
+      {/* Header - Keycap style */}
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-3 pt-4 safe-area-top bg-gradient-to-b from-game-dark via-game-dark/90 to-transparent">
         <div className="flex items-center justify-between">
           <motion.button
             onClick={() => router.push('/')}
-            className="p-2 rounded-lg bg-white/10"
-            whileTap={{ scale: 0.95 }}
+            className="px-3 py-2 rounded-xl font-bold text-sm"
+            style={{
+              background: 'linear-gradient(180deg, #44403C 0%, #292524 100%)',
+              boxShadow: '0 2px 0 0 #1C1917, inset 0 1px 0 rgba(255,255,255,0.05)',
+              color: '#FAFAF9',
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98, boxShadow: '0 0 0 0 #1C1917' }}
           >
-            ← Back
+            {"← Back"}
           </motion.button>
-          <h1 className="text-lg font-bold">🏆 Leaderboard</h1>
+          <h1 
+            className="text-lg font-bold text-game-light flex items-center gap-2"
+            style={{ fontFamily: 'var(--font-lilita), cursive' }}
+          >
+            <span>{"🏆"}</span> Leaderboard
+          </h1>
           <WalletDisplayCompact balance={balance} onViewToken={() => viewToken()} />
         </div>
       </header>
 
       {/* Main content */}
-      <div className="pt-24 pb-8 px-2 min-h-[100svh] flex flex-col justify-center">
-        <div className="w-full max-w-md mx-auto space-y-2">
-          {/* Tabs */}
+      <div className="pt-24 pb-8 px-3 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-md mx-auto space-y-4">
+          {/* Tabs - Keycap style */}
           <div className="flex gap-2">
-            {(['weekly', 'lifetime'] as TabType[]).map((tab) => (
-              <motion.button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${
-                  activeTab === tab
-                    ? 'bg-gradient-to-r from-game-primary to-game-secondary text-white'
-                    : 'bg-white/10 text-gray-400'
-                }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {tab === 'weekly' ? '📅 Weekly' : '🌟 All Time'}
-              </motion.button>
-            ))}
+            {(['weekly', 'lifetime'] as TabType[]).map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <motion.button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm"
+                  style={isActive ? {
+                    background: 'linear-gradient(180deg, #FF8C5A 0%, #FF6B35 100%)',
+                    color: '#FFF',
+                    boxShadow: '0 3px 0 0 #CC5429, 0 4px 12px rgba(255, 107, 53, 0.3)',
+                  } : {
+                    background: 'linear-gradient(180deg, #44403C 0%, #292524 100%)',
+                    color: '#A8A29E',
+                    boxShadow: '0 2px 0 0 #1C1917',
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {tab === 'weekly' ? '📅 Weekly' : '🌟 All Time'}
+                </motion.button>
+              );
+            })}
           </div>
 
-          {/* Prize info */}
+          {/* Prize info - Fun keycap card */}
           {activeTab === 'weekly' && (
             <motion.div
               className="card text-center"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <p className="text-sm text-gray-400 mb-1">Weekly Prize Pool</p>
-              <p className="text-2xl font-bold text-game-secondary">10,000 $PIZZA</p>
-              <p className="text-xs text-gray-400 mt-1">Top 3 players share the prize!</p>
+              <p className="text-sm text-stone-400 mb-2">Weekly Prize Pool</p>
+              <div 
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl mb-2"
+                style={{
+                  background: 'linear-gradient(180deg, #FFC875 0%, #FFB347 100%)',
+                  boxShadow: '0 3px 0 0 #CC8F39, 0 4px 12px rgba(255, 179, 71, 0.3)',
+                }}
+              >
+                <span className="text-2xl">{"🍕"}</span>
+                <span 
+                  className="text-2xl font-bold text-game-dark"
+                  style={{ fontFamily: 'var(--font-lilita), cursive' }}
+                >
+                  10,000 $PIZZA
+                </span>
+              </div>
+              <p className="text-xs text-stone-400">Top 3 players share the prize!</p>
             </motion.div>
           )}
 
@@ -96,11 +129,11 @@ export default function LeaderboardPage() {
           {isLoading ? (
             <div className="flex justify-center py-12">
               <motion.div
-                animate={{ rotate: 360 }}
+                animate={{ rotate: 360, scale: [1, 1.1, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                 className="text-4xl"
               >
-                🍕
+                {"🍕"}
               </motion.div>
             </div>
           ) : (
@@ -110,107 +143,136 @@ export default function LeaderboardPage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-3"
+                className="space-y-4"
               >
-              {/* Top 3 podium */}
+              {/* Top 3 podium - Keycap style */}
               {currentData.length >= 3 && (
-                <div className="grid grid-cols-3 gap-2 mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   {/* 2nd place */}
                   <motion.div
-                    className="card text-center pt-8"
+                    className="card text-center pt-6"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(168, 162, 158, 0.15) 0%, rgba(168, 162, 158, 0.05) 100%)',
+                      border: '1px solid rgba(168, 162, 158, 0.3)',
+                    }}
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <div className="text-3xl mb-2">🥈</div>
+                    <div className="text-3xl mb-2">{"🥈"}</div>
                     <img
                       src={currentData[1].player.pfpUrl}
                       alt={currentData[1].player.displayName}
-                      className="w-12 h-12 rounded-full mx-auto mb-2 ring-2 ring-gray-400"
+                      className="w-11 h-11 rounded-full mx-auto mb-2 ring-2 ring-stone-400"
                     />
-                    <p className="text-xs font-semibold truncate px-1">
+                    <p className="text-xs font-bold text-game-light truncate px-1">
                       {currentData[1].player.displayName}
                     </p>
-                    <p className="text-lg font-bold text-gray-400">
+                    <p className="text-lg font-bold text-stone-400">
                       {activeTab === 'weekly'
                         ? currentData[1].stats.weeklySlices
                         : currentData[1].stats.slicesCaptured}
                     </p>
-                    <p className="text-xs text-gray-500">slices</p>
+                    <p className="text-xs text-stone-500">slices</p>
                   </motion.div>
 
                   {/* 1st place */}
                   <motion.div
-                    className="card text-center bg-gradient-to-br from-game-secondary/20 to-game-primary/20 border border-game-secondary/30"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
+                    className="card text-center -mt-2"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 179, 71, 0.2) 0%, rgba(255, 107, 53, 0.1) 100%)',
+                      border: '1px solid rgba(255, 179, 71, 0.4)',
+                      boxShadow: '0 0 20px rgba(255, 179, 71, 0.2)',
+                    }}
+                    initial={{ y: 20, opacity: 0, scale: 0.95 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
                   >
-                    <div className="text-4xl mb-2">🥇</div>
+                    <motion.div 
+                      className="text-4xl mb-2"
+                      animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      {"🥇"}
+                    </motion.div>
                     <img
                       src={currentData[0].player.pfpUrl}
                       alt={currentData[0].player.displayName}
                       className="w-14 h-14 rounded-full mx-auto mb-2 ring-2 ring-game-secondary"
                     />
-                    <p className="text-sm font-semibold truncate px-1">
+                    <p className="text-sm font-bold text-game-light truncate px-1">
                       {currentData[0].player.displayName}
                     </p>
-                    <p className="text-xl font-bold text-game-secondary">
+                    <p 
+                      className="text-xl font-bold text-game-secondary"
+                      style={{ fontFamily: 'var(--font-lilita), cursive' }}
+                    >
                       {activeTab === 'weekly'
                         ? currentData[0].stats.weeklySlices
                         : currentData[0].stats.slicesCaptured}
                     </p>
-                    <p className="text-xs text-gray-400">slices</p>
+                    <p className="text-xs text-stone-400">slices</p>
                   </motion.div>
 
                   {/* 3rd place */}
                   <motion.div
-                    className="card text-center pt-8"
+                    className="card text-center pt-6"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.05) 100%)',
+                      border: '1px solid rgba(205, 127, 50, 0.3)',
+                    }}
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <div className="text-3xl mb-2">🥉</div>
+                    <div className="text-3xl mb-2">{"🥉"}</div>
                     <img
                       src={currentData[2].player.pfpUrl}
                       alt={currentData[2].player.displayName}
-                      className="w-12 h-12 rounded-full mx-auto mb-2 ring-2 ring-amber-700"
+                      className="w-11 h-11 rounded-full mx-auto mb-2 ring-2 ring-amber-700"
                     />
-                    <p className="text-xs font-semibold truncate px-1">
+                    <p className="text-xs font-bold text-game-light truncate px-1">
                       {currentData[2].player.displayName}
                     </p>
-                    <p className="text-lg font-bold text-amber-700">
+                    <p className="text-lg font-bold text-amber-600">
                       {activeTab === 'weekly'
                         ? currentData[2].stats.weeklySlices
                         : currentData[2].stats.slicesCaptured}
                     </p>
-                    <p className="text-xs text-gray-500">slices</p>
+                    <p className="text-xs text-stone-500">slices</p>
                   </motion.div>
                 </div>
               )}
 
-              {/* Full leaderboard list */}
+              {/* Full leaderboard list - Keycap style rows */}
               <div className="space-y-2">
                 {currentData.slice(3).map((entry, index) => (
                   <motion.button
                     key={entry.player.id}
                     onClick={() => handlePlayerClick(entry)}
-                    className="w-full card flex items-center gap-3 hover:bg-white/10 transition-colors"
+                    className="w-full card flex items-center gap-3 hover:scale-[1.01] transition-transform"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 * index }}
                   >
-                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm">
+                    <div 
+                      className="number-badge"
+                      style={{
+                        background: 'linear-gradient(180deg, #44403C 0%, #292524 100%)',
+                        color: '#A8A29E',
+                        boxShadow: '0 2px 0 0 #1C1917',
+                      }}
+                    >
                       {entry.rank}
                     </div>
                     <img
                       src={entry.player.pfpUrl}
                       alt={entry.player.displayName}
-                      className="w-10 h-10 rounded-full"
+                      className="w-10 h-10 rounded-full ring-1 ring-stone-600"
                     />
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-sm">{entry.player.displayName}</p>
-                      <p className="text-xs text-gray-400">
-                        {entry.stats.wins} wins • {entry.stats.gamesPlayed} games
+                      <p className="font-bold text-sm text-game-light">{entry.player.displayName}</p>
+                      <p className="text-xs text-stone-400">
+                        {entry.stats.wins} wins {"•"} {entry.stats.gamesPlayed} games
                       </p>
                     </div>
                     <div className="text-right">
@@ -219,22 +281,34 @@ export default function LeaderboardPage() {
                           ? entry.stats.weeklySlices
                           : entry.stats.slicesCaptured}
                       </p>
-                      <p className="text-xs text-gray-400">slices</p>
+                      <p className="text-xs text-stone-400">slices</p>
                     </div>
                   </motion.button>
                 ))}
               </div>
 
-              {/* Your rank (if not in top 20) */}
+              {/* Your rank (if not in top 20) - Keycap highlighted */}
               {context && (
                 <motion.div
-                  className="card mt-4 border border-game-primary/30"
+                  className="card mt-4"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(255, 107, 53, 0.15) 0%, rgba(255, 107, 53, 0.05) 100%)',
+                    border: '1px solid rgba(255, 107, 53, 0.3)',
+                    boxShadow: '0 0 12px rgba(255, 107, 53, 0.15)',
+                  }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-game-primary/20 flex items-center justify-center font-bold text-sm text-game-primary">
+                    <div 
+                      className="number-badge"
+                      style={{
+                        background: 'linear-gradient(180deg, #FF8C5A 0%, #FF6B35 100%)',
+                        color: '#FFF',
+                        boxShadow: '0 2px 0 0 #CC5429',
+                      }}
+                    >
                       42
                     </div>
                     <img
@@ -243,15 +317,15 @@ export default function LeaderboardPage() {
                       className="w-10 h-10 rounded-full ring-2 ring-game-primary"
                     />
                     <div className="flex-1">
-                      <p className="font-semibold text-sm">
+                      <p className="font-bold text-sm text-game-light">
                         {context.displayName}
                         <span className="text-game-primary ml-1">(You)</span>
                       </p>
-                      <p className="text-xs text-gray-400">156 slices captured</p>
+                      <p className="text-xs text-stone-400">156 slices captured</p>
                     </div>
                     <motion.button
                       onClick={() => handleShareRank(42)}
-                      className="px-3 py-1 bg-game-primary/20 rounded-lg text-sm text-game-primary"
+                      className="keycap-primary px-4 py-2 text-sm"
                       whileTap={{ scale: 0.95 }}
                     >
                       Share
@@ -263,13 +337,19 @@ export default function LeaderboardPage() {
             </AnimatePresence>
           )}
 
-          {/* Refresh button */}
+          {/* Refresh button - Keycap style */}
           <motion.button
             onClick={refreshLeaderboard}
-            className="w-full py-3 bg-white/5 rounded-xl text-gray-400 text-sm"
-            whileTap={{ scale: 0.98 }}
+            className="w-full py-3 rounded-xl font-bold text-sm"
+            style={{
+              background: 'linear-gradient(180deg, #44403C 0%, #292524 100%)',
+              color: '#A8A29E',
+              boxShadow: '0 2px 0 0 #1C1917',
+            }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
-            ↻ Refresh
+            {"↻"} Refresh
           </motion.button>
         </div>
       </div>

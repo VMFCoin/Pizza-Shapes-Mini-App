@@ -25,23 +25,30 @@ export function PlayerCard({
   return (
     <motion.div
       onClick={onClick}
-      className={`
-        relative p-3 rounded-xl cursor-pointer transition-all duration-200
-        ${isActive
-          ? 'bg-gradient-to-br from-game-primary/20 to-game-secondary/20 ring-2 ring-game-primary'
-          : 'bg-white/10 hover:bg-white/20'
-        }
-        ${isCurrentUser ? 'border-2 border-game-secondary' : ''}
-      `}
+      className="relative p-3 rounded-xl cursor-pointer transition-all duration-200"
+      style={isActive ? {
+        background: `linear-gradient(180deg, ${player.color}20 0%, ${player.color}10 100%)`,
+        border: `1px solid ${player.color}40`,
+        boxShadow: `0 0 12px ${player.color}20, 0 2px 0 0 ${player.color}30`,
+      } : {
+        background: 'linear-gradient(180deg, rgba(68, 64, 60, 0.5) 0%, rgba(41, 37, 36, 0.5) 100%)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        boxShadow: '0 2px 0 0 rgba(28, 25, 23, 0.5)',
+      }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       layout
     >
-      {/* Active indicator */}
+      {/* Active indicator dot */}
       {isActive && (
         <motion.div
-          className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-8 rounded-r-full bg-game-primary"
-          layoutId="activeIndicator"
+          className="absolute -left-1 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
+          style={{ 
+            backgroundColor: player.color,
+            boxShadow: `0 0 8px ${player.color}`,
+          }}
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
         />
       )}
 
@@ -49,25 +56,21 @@ export function PlayerCard({
         {/* Profile picture */}
         <div
           className="relative w-10 h-10 rounded-full overflow-hidden ring-2"
-          style={{ borderColor: player.color }}
+          style={{ 
+            borderColor: player.color,
+            boxShadow: isActive ? `0 0 10px ${player.color}50` : 'none',
+          }}
         >
           <img
             src={player.pfpUrl}
             alt={player.displayName}
             className="w-full h-full object-cover"
           />
-          {isActive && (
-            <motion.div
-              className="absolute inset-0 bg-game-primary/30"
-              animate={{ opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            />
-          )}
         </div>
 
         {/* Player info */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-white truncate text-sm">
+          <p className="font-bold text-game-light truncate text-sm">
             {player.displayName}
             {isCurrentUser && (
               <span className="ml-1 text-xs text-game-secondary">(You)</span>
@@ -75,26 +78,26 @@ export function PlayerCard({
           </p>
           {showReadyStatus ? (
             isReady ? (
-              <p className="text-xs text-green-400 flex items-center gap-1">
-                <span>✓</span> Ready
+              <p className="text-xs text-green-400 flex items-center gap-1 font-medium">
+                <span>{"✓"}</span> Ready
               </p>
             ) : (
-              <p className="text-xs text-gray-400">Waiting...</p>
+              <p className="text-xs text-stone-400">Waiting...</p>
             )
           ) : (
-            <p className="text-xs text-gray-400">FID: {player.fid}</p>
+            <p className="text-xs text-stone-400">FID: {player.fid}</p>
           )}
         </div>
 
         {/* Score */}
-        <div className="flex flex-col items-center">
+        <div className="flex items-center gap-1.5">
           <motion.div
             key={score}
-            initial={{ scale: 1.2 }}
+            initial={{ scale: 1.3 }}
             animate={{ scale: 1 }}
             className="flex items-center gap-1"
           >
-            <span className="text-2xl">🍕</span>
+            <span className="text-xl">{"🍕"}</span>
             <span
               className="text-xl font-bold"
               style={{ color: player.color }}
@@ -107,14 +110,17 @@ export function PlayerCard({
 
       {/* Color indicator bar */}
       <div
-        className="absolute bottom-0 left-4 right-4 h-1 rounded-full"
-        style={{ backgroundColor: player.color }}
+        className="absolute bottom-0 left-3 right-3 h-1 rounded-full"
+        style={{ 
+          backgroundColor: player.color,
+          boxShadow: isActive ? `0 0 6px ${player.color}` : 'none',
+        }}
       />
     </motion.div>
   );
 }
 
-// Compact version for smaller displays
+// Compact version for smaller displays - Keycap style
 export function PlayerCardCompact({
   player,
   score,
@@ -122,10 +128,15 @@ export function PlayerCardCompact({
 }: Omit<PlayerCardProps, 'onClick' | 'isCurrentUser'>) {
   return (
     <motion.div
-      className={`
-        flex items-center gap-2 px-2 py-1 rounded-lg
-        ${isActive ? 'bg-game-primary/20 ring-1 ring-game-primary' : 'bg-white/5'}
-      `}
+      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
+      style={isActive ? {
+        background: `linear-gradient(180deg, ${player.color}30 0%, ${player.color}15 100%)`,
+        border: `1px solid ${player.color}40`,
+        boxShadow: `0 0 8px ${player.color}20`,
+      } : {
+        background: 'rgba(41, 37, 36, 0.6)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+      }}
       layout
     >
       <div
@@ -138,7 +149,7 @@ export function PlayerCardCompact({
           className="w-full h-full object-cover"
         />
       </div>
-      <span className="text-xs font-medium text-white truncate max-w-[60px]">
+      <span className="text-xs font-bold text-game-light truncate max-w-[60px]">
         {player.displayName}
       </span>
       <span

@@ -80,7 +80,7 @@ function GameOverContent() {
     if (isWinner) {
       shareMatchWin(matchId || '', demoResults.scores[winnerId || ''] || 0, demoResults.prize);
     } else {
-      composeCast(`Just played Pizza Dots and captured ${demoResults.scores[`player_${context?.fid}`] || 0} slices! 🍕 Can you beat my score?`);
+      composeCast(`Just played Pizza Dots and captured ${demoResults.scores[`player_${context?.fid}`] || 0} slices! Can you beat my score?`);
     }
     setHasShared(true);
   };
@@ -112,11 +112,11 @@ function GameOverContent() {
       )}
 
       {/* Main content */}
-      <div className="relative z-10 px-2 pt-12 pb-32 min-h-[100svh] flex flex-col justify-center">
-        <div className="w-full max-w-md mx-auto space-y-2">
-        {/* Result header */}
+      <div className="relative z-10 px-3 pt-12 pb-32 min-h-[100svh] flex flex-col justify-center">
+        <div className="w-full max-w-md mx-auto space-y-4">
+        {/* Result header - Fun keycap style */}
         <motion.div
-          className="text-center mb-8"
+          className="text-center mb-6"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -130,182 +130,210 @@ function GameOverContent() {
                 }}
                 transition={{ duration: 0.5, repeat: 3 }}
               >
-                🏆
+                {"🏆"}
               </motion.div>
-              <h1 className="text-3xl font-bold gradient-text mb-2">
+              <h1 
+                className="text-4xl font-bold gradient-text mb-2"
+                style={{ fontFamily: 'var(--font-lilita), cursive' }}
+              >
                 Victory!
               </h1>
-              <p className="text-gray-400">You captured the most slices!</p>
+              <p className="text-stone-400">You captured the most slices!</p>
             </>
           ) : (
             <>
               <motion.div
                 className="text-6xl mb-4"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 200 }}
               >
-                🍕
+                {"🍕"}
               </motion.div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 
+                className="text-3xl font-bold text-game-light mb-2"
+                style={{ fontFamily: 'var(--font-lilita), cursive' }}
+              >
                 Game Over
               </h1>
-              <p className="text-gray-400">Better luck next time!</p>
+              <p className="text-stone-400">Better luck next time!</p>
             </>
           )}
         </motion.div>
 
-        {/* Winner showcase */}
+        {/* Winner showcase - Keycap card */}
         <motion.div
           className="card"
+          style={isWinner ? {
+            background: 'linear-gradient(180deg, rgba(255, 179, 71, 0.15) 0%, rgba(255, 107, 53, 0.08) 100%)',
+            border: '1px solid rgba(255, 179, 71, 0.3)',
+            boxShadow: '0 0 20px rgba(255, 179, 71, 0.15)',
+          } : {}}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
         >
           <div className="text-center mb-4">
-            <p className="text-sm text-gray-400 mb-2">Winner</p>
-            <div className="flex items-center justify-center gap-3">
+            <p className="text-sm text-stone-400 mb-3">{"🎉"} Winner</p>
+            <div className="flex items-center justify-center gap-4">
               <img
                 src={winner.pfpUrl}
                 alt={winner.displayName}
                 className="w-16 h-16 rounded-full ring-4 ring-game-secondary"
+                style={{ boxShadow: '0 0 20px rgba(255, 179, 71, 0.3)' }}
               />
               <div className="text-left">
-                <p className="text-xl font-bold text-white">{winner.displayName}</p>
-                <p className="text-sm text-gray-400">FID: {winner.fid}</p>
+                <p className="text-xl font-bold text-game-light">{winner.displayName}</p>
+                <p className="text-sm text-stone-400">FID: {winner.fid}</p>
               </div>
             </div>
           </div>
 
-          {/* Prize info */}
+          {/* Prize info - Fun keycap badge */}
           {isWinner && (
             <motion.div
-              className="bg-gradient-to-r from-game-primary/20 to-game-secondary/20 rounded-xl p-4 text-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              className="rounded-xl p-4 text-center"
+              style={{
+                background: 'linear-gradient(180deg, #FFC875 0%, #FFB347 100%)',
+                boxShadow: '0 4px 0 0 #CC8F39, 0 6px 16px rgba(255, 179, 71, 0.3)',
+              }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              <p className="text-sm text-gray-400 mb-1">You Won</p>
-              <p className="text-3xl font-bold text-game-secondary">
+              <p className="text-sm text-game-dark/70 mb-1">You Won</p>
+              <p 
+                className="text-3xl font-bold text-game-dark"
+                style={{ fontFamily: 'var(--font-lilita), cursive' }}
+              >
                 {formatPrize(demoResults.prize)} $PIZZA
               </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Prize sent to your wallet
+              <p className="text-xs text-game-dark/60 mt-1">
+                Prize sent to your wallet {"💰"}
               </p>
             </motion.div>
           )}
         </motion.div>
 
-        {/* Final standings */}
+        {/* Final standings - Keycap list style */}
         <motion.div
           className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h3 className="font-semibold mb-4">Final Standings</h3>
+          <h3 className="font-bold mb-4 text-game-light">{"🏅"} Final Standings</h3>
           <div className="space-y-3">
             {rankedPlayers.map((player, index) => (
               <motion.div
                 key={player.id}
-                className="flex items-center gap-3"
+                className="flex items-center gap-3 p-2 rounded-xl"
+                style={{
+                  background: index === 0 ? 'rgba(255, 179, 71, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                  border: index === 0 ? '1px solid rgba(255, 179, 71, 0.2)' : 'none',
+                }}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + index * 0.1 }}
               >
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold">
-                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                <div 
+                  className="number-badge"
+                  style={index === 0 ? {
+                    background: 'linear-gradient(180deg, #FFC875 0%, #FFB347 100%)',
+                    color: '#1C1917',
+                    boxShadow: '0 2px 0 0 #CC8F39',
+                  } : {
+                    background: 'linear-gradient(180deg, #44403C 0%, #292524 100%)',
+                    color: '#A8A29E',
+                    boxShadow: '0 2px 0 0 #1C1917',
+                  }}
+                >
+                  {index === 0 ? '1st' : index === 1 ? '2nd' : index === 2 ? '3rd' : `${index + 1}th`}
                 </div>
                 <img
                   src={player.pfpUrl}
                   alt={player.displayName}
-                  className="w-10 h-10 rounded-full"
+                  className="w-10 h-10 rounded-full ring-1 ring-stone-600"
                 />
                 <div className="flex-1">
-                  <p className="font-semibold text-white">{player.displayName}</p>
+                  <p className="font-bold text-game-light">{player.displayName}</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold" style={{ color: player.color }}>
+                <div className="flex items-center gap-2">
+                  <span>{"🍕"}</span>
+                  <span className="font-bold text-lg" style={{ color: player.color }}>
                     {demoResults.scores[player.id] || 0}
-                  </p>
-                  <p className="text-xs text-gray-400">slices</p>
+                  </span>
                 </div>
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-        {/* Match stats */}
+        {/* Match stats - Keycap stat cards */}
         <motion.div
           className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <h3 className="font-semibold mb-4">Match Stats</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-game-primary">
-                {Object.values(demoResults.scores).reduce((a, b) => a + b, 0)}
-              </p>
-              <p className="text-xs text-gray-400">Total Slices</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-game-secondary">
-                {demoResults.players.length}
-              </p>
-              <p className="text-xs text-gray-400">Players</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">
-                {formatPrize(demoResults.prize)}
-              </p>
-              <p className="text-xs text-gray-400">$PIZZA Pool</p>
-            </div>
+          <h3 className="font-bold mb-4 text-game-light">{"📊"} Match Stats</h3>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            {[
+              { value: Object.values(demoResults.scores).reduce((a, b) => a + b, 0), label: 'Total Slices', color: '#FF6B35' },
+              { value: demoResults.players.length, label: 'Players', color: '#4ECDC4' },
+              { value: formatPrize(demoResults.prize), label: '$PIZZA Pool', color: '#FFB347' },
+            ].map((stat, i) => (
+              <div 
+                key={i}
+                className="p-3 rounded-xl"
+                style={{
+                  background: `${stat.color}15`,
+                  border: `1px solid ${stat.color}30`,
+                }}
+              >
+                <p className="text-2xl font-bold" style={{ color: stat.color }}>
+                  {stat.value}
+                </p>
+                <p className="text-xs text-stone-400">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </motion.div>
 
-        {/* Prize distribution */}
+        {/* Prize distribution - Clean list */}
         <motion.div
           className="card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
         >
-          <h3 className="font-semibold mb-3">Prize Distribution</h3>
+          <h3 className="font-bold mb-3 text-game-light">{"💰"} Prize Distribution</h3>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">🏆 Match Winner (77%)</span>
-              <span className="text-game-secondary font-bold">
-                {formatPrize((demoResults.prize * BigInt(77)) / BigInt(100))} $PIZZA
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">🎖️ Weekly Pool (10%)</span>
-              <span>{formatPrize((demoResults.prize * BigInt(10)) / BigInt(100))} $PIZZA</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">🔥 Burned (7%)</span>
-              <span>{formatPrize((demoResults.prize * BigInt(7)) / BigInt(100))} $PIZZA</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">🎲 Daily Free Roll (3%)</span>
-              <span>{formatPrize((demoResults.prize * BigInt(3)) / BigInt(100))} $PIZZA</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">🎗️ Charities (3%)</span>
-              <span>{formatPrize((demoResults.prize * BigInt(3)) / BigInt(100))} $PIZZA</span>
-            </div>
+            {[
+              { emoji: '🏆', label: 'Match Winner (77%)', value: formatPrize((demoResults.prize * BigInt(77)) / BigInt(100)), highlight: true },
+              { emoji: '🎖️', label: 'Weekly Pool (10%)', value: formatPrize((demoResults.prize * BigInt(10)) / BigInt(100)) },
+              { emoji: '🔥', label: 'Burned (7%)', value: formatPrize((demoResults.prize * BigInt(7)) / BigInt(100)) },
+              { emoji: '🎲', label: 'Daily Free Roll (3%)', value: formatPrize((demoResults.prize * BigInt(3)) / BigInt(100)) },
+              { emoji: '🎗️', label: 'Charities (3%)', value: formatPrize((demoResults.prize * BigInt(3)) / BigInt(100)) },
+            ].map((item, i) => (
+              <div key={i} className="flex justify-between items-center">
+                <span className="text-stone-400">{item.emoji} {item.label}</span>
+                <span className={item.highlight ? 'text-game-secondary font-bold' : 'text-stone-300'}>
+                  {item.value} $PIZZA
+                </span>
+              </div>
+            ))}
           </div>
         </motion.div>
         </div>
       </div>
 
-      {/* Bottom actions */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-2 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
-        <div className="space-y-3">
+      {/* Bottom actions - Keycap buttons */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-3 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+        <div className="card p-4 space-y-3">
           <motion.button
             onClick={handleShare}
-            className={`w-full btn-primary ${hasShared ? 'opacity-50' : ''}`}
+            className={`w-full btn-primary py-4 text-base ${hasShared ? 'opacity-50' : ''}`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={hasShared}
@@ -316,19 +344,19 @@ function GameOverContent() {
           <div className="flex gap-3">
             <motion.button
               onClick={handlePlayAgain}
-              className="flex-1 btn-secondary"
+              className="flex-1 keycap-teal py-3 text-sm"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              🎮 Play Again
+              {"🎮"} Play Again
             </motion.button>
             <motion.button
               onClick={handleViewLeaderboard}
-              className="flex-1 btn-secondary"
+              className="flex-1 keycap-secondary py-3 text-sm"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              🏆 Leaderboard
+              {"🏆"} Leaderboard
             </motion.button>
           </div>
         </div>
@@ -355,7 +383,7 @@ export default function GameOverPage() {
             transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             className="text-6xl"
           >
-            🍕
+            {"🍕"}
           </motion.div>
         </div>
       }

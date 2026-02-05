@@ -1,7 +1,21 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import { Nunito, Lilita_One } from 'next/font/google';
 import './globals.css';
 import ContextProvider from '@/providers/ContextProvider';
+
+const nunito = Nunito({ 
+  subsets: ['latin'],
+  variable: '--font-nunito',
+  display: 'swap',
+});
+
+const lilitaOne = Lilita_One({ 
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-lilita',
+  display: 'swap',
+});
 
 // Farcaster Mini App embed metadata
 const fcMiniApp = {
@@ -14,7 +28,7 @@ const fcMiniApp = {
       name: "Pizza Dots",
       url: "https://pizza-shapes-mini-app.vercel.app",
       splashImageUrl: "https://pizza-shapes-mini-app.vercel.app/splash.png",
-      splashBackgroundColor: "#1A1A2E"
+      splashBackgroundColor: "#1C1917"
     }
   }
 };
@@ -42,8 +56,8 @@ export default async function RootLayout({
   const cookies = headersObj.get('cookie');
 
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-game-dark text-white antialiased flex flex-col items-center px-2">
+    <html lang="en" className={`${nunito.variable} ${lilitaOne.variable}`}>
+      <body className="min-h-screen bg-game-dark text-game-light antialiased flex flex-col items-center px-2 font-sans">
         <ContextProvider cookies={cookies}>
           <div className="w-full max-w-md mx-auto">
             {children}
