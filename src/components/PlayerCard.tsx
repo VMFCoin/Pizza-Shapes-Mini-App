@@ -8,6 +8,8 @@ interface PlayerCardProps {
   score: number;
   isActive: boolean;
   isCurrentUser?: boolean;
+  isReady?: boolean;
+  showReadyStatus?: boolean;
   onClick?: () => void;
 }
 
@@ -16,6 +18,8 @@ export function PlayerCard({
   score,
   isActive,
   isCurrentUser = false,
+  isReady,
+  showReadyStatus = false,
   onClick,
 }: PlayerCardProps) {
   return (
@@ -69,7 +73,17 @@ export function PlayerCard({
               <span className="ml-1 text-xs text-game-secondary">(You)</span>
             )}
           </p>
-          <p className="text-xs text-gray-400">FID: {player.fid}</p>
+          {showReadyStatus ? (
+            isReady ? (
+              <p className="text-xs text-green-400 flex items-center gap-1">
+                <span>✓</span> Ready
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400">Waiting...</p>
+            )
+          ) : (
+            <p className="text-xs text-gray-400">FID: {player.fid}</p>
+          )}
         </div>
 
         {/* Score */}

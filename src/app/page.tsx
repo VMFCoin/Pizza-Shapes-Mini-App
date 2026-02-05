@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { parseUnits } from 'viem';
 import {
   WalletDisplay,
   EntryTierSelector,
@@ -21,23 +20,14 @@ const DOT_COLORS = ['#FF6B6B', '#4ECDC4', '#F7DC6F', '#BB8FCE', '#58D68D', '#5DA
 
 export default function HomePage() {
   const router = useRouter();
-  const { address, balance, isConnected, connect, isConnecting, isLoadingBalance } = useWallet();
-  const { context, viewToken, viewProfile } = useFarcaster();
+  const { address, isConnected, connect, isConnecting } = useWallet();
+  const { context, viewProfile } = useFarcaster();
   const { stats: onChainStats, isLoading: statsLoading } = useOnChainStats(address);
 
   const [selectedTier, setSelectedTier] = useState(2);
   const [showFreeRoll, setShowFreeRoll] = useState(false);
 
   const currentTier = ENTRY_TIERS.find(t => t.id === selectedTier)!;
-
-  // Check if user has enough balance for the selected tier
-  const requiredAmount = useMemo(() => {
-    return parseUnits(currentTier.amount.toString(), 18);
-  }, [currentTier.amount]);
-
-  const hasEnoughBalance = useMemo(() => {
-    return balance >= requiredAmount;
-  }, [balance, requiredAmount]);
 
   const handlePlayNow = async () => {
     if (!isConnected) {
@@ -304,50 +294,33 @@ export default function HomePage() {
 
           {/* Bottom buttons */}
           <div className="space-y-3">
-            {isConnected && !isLoadingBalance && !hasEnoughBalance ? (
-              <motion.button
-                onClick={() => viewToken()}
-                className="w-full py-4 rounded-xl font-bold text-lg text-white"
-                style={{
-                  background: 'linear-gradient(135deg, #F7DC6F, #FF6B6B)',
-                  boxShadow: '0 0 30px rgba(247, 220, 111, 0.4), 0 0 60px rgba(255, 107, 107, 0.2)',
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
+            <motion.button
+              onClick={handlePlayNow}
+              disabled={isConnecting}
+              className="w-full py-4 rounded-xl font-bold text-lg text-white"
+              style={{
+                background: 'linear-gradient(135deg, #FF6B6B, #F7DC6F, #4ECDC4)',
+                boxShadow: '0 0 30px rgba(247, 220, 111, 0.4), 0 0 60px rgba(78, 205, 196, 0.2)',
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {isConnecting ? (
                 <span className="flex items-center justify-center gap-2">
-                  Buy $PIZZA to Play {currentTier.label}
+                  <motion.span
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  >
+                    🍕
+                  </motion.span>
+                  Connecting...
                 </span>
-              </motion.button>
-            ) : (
-              <motion.button
-                onClick={handlePlayNow}
-                disabled={isConnecting || isLoadingBalance}
-                className="w-full py-4 rounded-xl font-bold text-lg text-white"
-                style={{
-                  background: 'linear-gradient(135deg, #FF6B6B, #F7DC6F, #4ECDC4)',
-                  boxShadow: '0 0 30px rgba(247, 220, 111, 0.4), 0 0 60px rgba(78, 205, 196, 0.2)',
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {isConnecting || isLoadingBalance ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <motion.span
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    >
-                      🍕
-                    </motion.span>
-                    Loading...
-                  </span>
-                ) : !isConnected ? (
-                  'Connect Wallet to Play'
-                ) : (
-                  `Play Now - ${currentTier.label}`
-                )}
-              </motion.button>
-            )}
+              ) : !isConnected ? (
+                'Connect Wallet to Play'
+              ) : (
+                `Play Now - ${currentTier.label}`
+              )}
+            </motion.button>
 
             <div className="flex gap-3">
               <motion.button

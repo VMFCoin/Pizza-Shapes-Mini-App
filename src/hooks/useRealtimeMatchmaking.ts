@@ -5,9 +5,14 @@ import { supabase, MatchQueueRow, PlayerRow } from '@/lib/supabase';
 import { Player, MatchID, ENTRY_TIERS } from '@/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+// Extended player info with ready status
+export interface QueuePlayer extends Player {
+  isReady: boolean;
+}
+
 interface UseRealtimeMatchmakingReturn {
   isInQueue: boolean;
-  queuePlayers: Player[];
+  queuePlayers: QueuePlayer[];
   matchId: MatchID | undefined;
   isMatchReady: boolean;
   countdown: number | null;
@@ -15,17 +20,20 @@ interface UseRealtimeMatchmakingReturn {
   queuePosition: number | null;
   error: string | null;
   connectionStatus: 'connecting' | 'connected' | 'disconnected';
+  isCurrentPlayerReady: boolean;
+  readyPlayerCount: number;
   joinQueue: (tier: number, player: Player) => Promise<void>;
   leaveQueue: () => Promise<void>;
   setSelectedTier: (tier: number) => void;
+  markPlayerReady: () => Promise<void>;
 }
 
-const COUNTDOWN_SECONDS = 5;
-const MIN_PLAYERS = 2;
+const COUNTDOWN_SECONDS = 60;
+const MIN_PLAYERS_TO_START = 2;
 
 export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtimeMatchmakingReturn {
   const [isInQueue, setIsInQueue] = useState(false);
-  const [queuePlayers, setQueuePlayers] = useState<Player[]>([]);
+  const [queuePlayers, setQueuePlayers] = useState<QueuePlayer[]>([]);
   const [matchId, setMatchId] = useState<MatchID | undefined>();
   const [isMatchReady, setIsMatchReady] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -33,11 +41,13 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [isCurrentPlayerReady, setIsCurrentPlayerReady] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const queueEntryIdRef = useRef<string | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentPlayerRef = useRef<Player | null>(currentPlayer);
+  const countdownStartedRef = useRef(false);
 
   // Keep currentPlayer ref updated
   useEffect(() => {
@@ -54,6 +64,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         joined_at,
         status,
         match_id,
+        is_ready,
         players (
           fid,
           display_name,
@@ -70,26 +81,30 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       return;
     }
 
-    const players: Player[] = (data || []).map((entry: any, index: number) => ({
+    const players: QueuePlayer[] = (data || []).map((entry: any) => ({
       id: `player_${entry.player_fid}`,
       fid: entry.player_fid,
       displayName: entry.players?.display_name || `Player ${entry.player_fid}`,
       pfpUrl: entry.players?.pfp_url || '',
       address: entry.players?.address || '',
       color: '',
+      isReady: entry.is_ready || false,
     }));
 
     setQueuePlayers(players);
+
+    // Update current player's ready status
+    if (currentPlayerRef.current) {
+      const currentPlayerEntry = players.find(p => p.fid === currentPlayerRef.current?.fid);
+      if (currentPlayerEntry) {
+        setIsCurrentPlayerReady(currentPlayerEntry.isReady);
+      }
+    }
 
     // Update queue position for current player
     if (currentPlayerRef.current) {
       const position = players.findIndex(p => p.fid === currentPlayerRef.current?.fid);
       setQueuePosition(position >= 0 ? position + 1 : null);
-    }
-
-    // Check if we have enough players for a match
-    if (players.length >= MIN_PLAYERS) {
-      await triggerMatchmaking(tier, players.slice(0, getMaxPlayers(tier)));
     }
   }, []);
 
@@ -99,13 +114,13 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     return tierConfig?.maxPlayers || 2;
   };
 
-  // Trigger server-side matchmaking
-  const triggerMatchmaking = async (tier: number, players: Player[]) => {
+  // Trigger server-side matchmaking with only ready players
+  const triggerMatchmaking = async (tier: number, readyPlayers: QueuePlayer[]) => {
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('create-match', {
         body: {
           tier,
-          playerFids: players.map(p => p.fid),
+          playerFids: readyPlayers.map(p => p.fid),
         },
       });
 
@@ -117,8 +132,32 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     }
   };
 
-  // Start countdown when match is ready
-  const startCountdown = useCallback(() => {
+  // Mark current player as ready (after payment)
+  const markPlayerReady = useCallback(async () => {
+    if (!queueEntryIdRef.current || !currentPlayerRef.current) return;
+
+    try {
+      const { error: updateError } = await (supabase as any)
+        .from('match_queue')
+        .update({ is_ready: true })
+        .eq('id', queueEntryIdRef.current);
+
+      if (updateError) {
+        console.error('Error marking player ready:', updateError);
+        return;
+      }
+
+      setIsCurrentPlayerReady(true);
+    } catch (err) {
+      console.error('Failed to mark player ready:', err);
+    }
+  }, []);
+
+  // Start countdown when player joins queue
+  const startCountdown = useCallback((tier: number) => {
+    if (countdownStartedRef.current) return;
+    countdownStartedRef.current = true;
+
     setCountdown(COUNTDOWN_SECONDS);
     countdownIntervalRef.current = setInterval(() => {
       setCountdown(prev => {
@@ -168,7 +207,6 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
             const newMatchId = (payload.new as MatchQueueRow).match_id as string;
             setMatchId(newMatchId);
             setIsMatchReady(true);
-            startCountdown();
           }
         }
       )
@@ -181,7 +219,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       });
 
     channelRef.current = channel;
-  }, [refreshQueuePlayers, startCountdown]);
+  }, [refreshQueuePlayers]);
 
   // Join the matchmaking queue
   const joinQueue = useCallback(async (tier: number, player: Player) => {
@@ -236,11 +274,14 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       // Subscribe to queue updates
       await subscribeToQueue(tier);
       await refreshQueuePlayers(tier);
+
+      // Start countdown immediately when joining
+      startCountdown(tier);
     } catch (err: any) {
       setError(err.message || 'Failed to join queue');
       console.error('Join queue error:', err);
     }
-  }, [isInQueue, subscribeToQueue, refreshQueuePlayers]);
+  }, [isInQueue, subscribeToQueue, refreshQueuePlayers, startCountdown]);
 
   // Leave the matchmaking queue
   const leaveQueue = useCallback(async () => {
@@ -271,7 +312,9 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       setCountdown(null);
       setQueuePosition(null);
       setConnectionStatus('disconnected');
+      setIsCurrentPlayerReady(false);
       queueEntryIdRef.current = null;
+      countdownStartedRef.current = false;
     } catch (err) {
       console.error('Leave queue error:', err);
     }
@@ -289,6 +332,9 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     };
   }, []);
 
+  // Count ready players
+  const readyPlayerCount = queuePlayers.filter(p => p.isReady).length;
+
   return {
     isInQueue,
     queuePlayers,
@@ -299,8 +345,11 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     queuePosition,
     error,
     connectionStatus,
+    isCurrentPlayerReady,
+    readyPlayerCount,
     joinQueue,
     leaveQueue,
     setSelectedTier,
+    markPlayerReady,
   };
 }

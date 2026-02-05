@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -9,9 +9,11 @@ import {
   Background,
   WalletDisplayCompact,
 } from '@/components';
-import { useWallet, useFarcaster } from '@/hooks';
+import { useWallet, useFarcaster, usePayment } from '@/hooks';
 import { useRealtimeMatchmaking } from '@/hooks/useRealtimeMatchmaking';
+import { getPaymentStepMessage, isPaymentLoading } from '@/hooks/usePayment';
 import { ENTRY_TIERS, Player } from '@/types';
+import { type Address } from 'viem';
 
 function WaitingRoomContent() {
   const router = useRouter();
@@ -21,6 +23,9 @@ function WaitingRoomContent() {
 
   const { address, balance, isConnected } = useWallet();
   const { context, viewToken, viewProfile } = useFarcaster();
+  const { paymentState, enterMatchWithPayment, formatPizzaAmount, resetPayment } = usePayment();
+
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Create current player from context
   const currentPlayer: Player | null = context
@@ -43,8 +48,11 @@ function WaitingRoomContent() {
     queuePosition,
     error,
     connectionStatus,
+    isCurrentPlayerReady,
+    readyPlayerCount,
     joinQueue,
     leaveQueue,
+    markPlayerReady,
   } = useRealtimeMatchmaking(currentPlayer);
 
   const currentTier = ENTRY_TIERS.find(t => t.id === tier);
@@ -56,12 +64,38 @@ function WaitingRoomContent() {
     }
   }, [currentPlayer, isInQueue, isConnected, tier, joinQueue]);
 
-  // Navigate to game when countdown reaches 0
+  // Navigate to game when countdown reaches 0 and player is ready
   useEffect(() => {
-    if (countdown === 0 && matchId) {
-      router.push(`/game?matchId=${matchId}&tier=${tier}`);
+    if (countdown === 0 && isCurrentPlayerReady && readyPlayerCount >= 2) {
+      // Generate a match ID for the ready players
+      const newMatchId = `match_${Date.now()}_${tier}`;
+      router.push(`/game?matchId=${newMatchId}&tier=${tier}`);
     }
-  }, [countdown, matchId, tier, router]);
+  }, [countdown, isCurrentPlayerReady, readyPlayerCount, tier, router]);
+
+  // Handle Enter Game payment
+  const handleEnterGame = async () => {
+    if (!address || !currentPlayer || isProcessingPayment) return;
+
+    setIsProcessingPayment(true);
+    resetPayment();
+
+    try {
+      // Generate a match ID for payment tracking
+      const paymentMatchId = `match_${Date.now()}_${tier}`;
+
+      const success = await enterMatchWithPayment(paymentMatchId, tier, address as Address);
+
+      if (success) {
+        // Mark player as ready in the queue
+        await markPlayerReady();
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   const handleLeave = () => {
     leaveQueue();
@@ -113,56 +147,37 @@ function WaitingRoomContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {!isMatchReady ? (
-              <>
-                <motion.div
-                  className="text-6xl mb-4"
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  🍕
-                </motion.div>
-                <h2 className="text-xl font-bold mb-2">Finding Players...</h2>
-                <p className="text-gray-400 text-sm">
-                  {currentTier?.label} tier - {currentTier?.description}
-                </p>
-                {queuePosition && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Your position: #{queuePosition}
-                  </p>
-                )}
-                <div className="mt-4 flex justify-center">
-                  <motion.div
-                    className="flex gap-1"
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <span className="w-2 h-2 bg-game-primary rounded-full" />
-                    <span className="w-2 h-2 bg-game-primary rounded-full" />
-                    <span className="w-2 h-2 bg-game-primary rounded-full" />
-                  </motion.div>
-                </div>
-              </>
-            ) : (
-              <>
-                <motion.div
-                  className="text-6xl mb-4"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                >
-                  🎮
-                </motion.div>
-                <h2 className="text-xl font-bold mb-2">Match Found!</h2>
-                <p className="text-gray-400 text-sm mb-4">Get ready to play...</p>
-                <motion.div
-                  className="text-5xl font-bold text-game-secondary"
-                  key={countdown}
-                  initial={{ scale: 1.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                >
-                  {countdown}
-                </motion.div>
-              </>
+            <motion.div
+              className="text-6xl mb-4"
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              🍕
+            </motion.div>
+            <h2 className="text-xl font-bold mb-2">
+              {countdown !== null && countdown > 0
+                ? `Game starts in ${countdown}s`
+                : countdown === 0
+                  ? (isCurrentPlayerReady ? 'Starting...' : 'Time\'s up!')
+                  : 'Finding Players...'}
+            </h2>
+            <p className="text-gray-400 text-sm">
+              {currentTier?.label} tier - {currentTier?.description}
+            </p>
+            {readyPlayerCount > 0 && (
+              <p className="text-xs text-green-400 mt-2">
+                {readyPlayerCount} player{readyPlayerCount !== 1 ? 's' : ''} ready
+              </p>
+            )}
+            {countdown !== null && countdown > 0 && (
+              <motion.div
+                className="mt-4 text-4xl font-bold text-game-secondary"
+                key={countdown}
+                initial={{ scale: 1.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+              >
+                {countdown}
+              </motion.div>
             )}
           </motion.div>
 
@@ -193,6 +208,8 @@ function WaitingRoomContent() {
                       score={0}
                       isActive={false}
                       isCurrentUser={player.id === currentPlayer?.id}
+                      isReady={player.isReady}
+                      showReadyStatus={true}
                       onClick={() => viewProfile(player.fid)}
                     />
                   </motion.div>
@@ -234,16 +251,65 @@ function WaitingRoomContent() {
 
       {/* Bottom action bar */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-2 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
-        <div>
-          <motion.button
-            onClick={handleLeave}
-            className="w-full btn-secondary"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={isMatchReady}
-          >
-            {isMatchReady ? 'Starting...' : 'Leave Queue'}
-          </motion.button>
+        <div className="space-y-3">
+          {/* Payment status message */}
+          {isPaymentLoading(paymentState.step) && (
+            <motion.div
+              className="bg-game-primary/20 rounded-xl p-3 text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-sm text-white">{getPaymentStepMessage(paymentState.step)}</p>
+            </motion.div>
+          )}
+
+          {paymentState.step === 'error' && (
+            <motion.div
+              className="bg-red-500/20 rounded-xl p-3 text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-sm text-red-400">{paymentState.error}</p>
+            </motion.div>
+          )}
+
+          {/* Enter Game / Ready button */}
+          {isCurrentPlayerReady ? (
+            <motion.div
+              className="w-full py-4 rounded-xl font-bold text-lg text-center bg-green-500/20 border-2 border-green-500 text-green-400"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span>✓</span> Ready!
+              </span>
+            </motion.div>
+          ) : (
+            <motion.button
+              onClick={handleEnterGame}
+              className="w-full btn-primary"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isProcessingPayment || countdown === 0}
+            >
+              {isProcessingPayment
+                ? 'Processing...'
+                : `Enter Game - $${currentTier?.amount.toFixed(2) || '0.50'}`}
+            </motion.button>
+          )}
+
+          {/* Leave Queue button - only show if not ready */}
+          {!isCurrentPlayerReady && (
+            <motion.button
+              onClick={handleLeave}
+              className="w-full btn-secondary"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isProcessingPayment}
+            >
+              Leave Queue
+            </motion.button>
+          )}
         </div>
       </div>
     </main>
