@@ -47,15 +47,39 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const queueEntryIdRef = useRef<string | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentPlayerRef = useRef<Player | null>(currentPlayer);
-  const countdownStartedRef = useRef(false);
+  const previousPlayerCountRef = useRef<number>(0);
 
   // Keep currentPlayer ref updated
   useEffect(() => {
     currentPlayerRef.current = currentPlayer;
   }, [currentPlayer]);
 
+  // Start or restart countdown (resets to 60s when new player joins)
+  const startCountdown = useCallback(() => {
+    // Clear any existing countdown
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    // Start fresh countdown at 60 seconds
+    setCountdown(COUNTDOWN_SECONDS);
+    countdownIntervalRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
   // Fetch queue players from database
-  const refreshQueuePlayers = useCallback(async (tier: number) => {
+  const refreshQueuePlayers = useCallback(async (tier: number, shouldRestartCountdown: boolean = false) => {
     if (!isSupabaseAvailable()) {
       console.warn('Supabase client not initialized');
       return;
@@ -95,6 +119,18 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       isReady: entry.is_ready || false,
     }));
 
+    // Check if a new player joined (player count increased)
+    const previousCount = previousPlayerCountRef.current;
+    const newCount = players.length;
+
+    // Reset countdown if a new player joined (count increased)
+    if (newCount > previousCount && previousCount > 0) {
+      startCountdown();
+    }
+
+    // Update the previous count
+    previousPlayerCountRef.current = newCount;
+
     setQueuePlayers(players);
 
     // Update current player's ready status
@@ -110,7 +146,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       const position = players.findIndex(p => p.fid === currentPlayerRef.current?.fid);
       setQueuePosition(position >= 0 ? position + 1 : null);
     }
-  }, []);
+  }, [startCountdown]);
 
   // Get max players for tier
   const getMaxPlayers = (tier: number): number => {
@@ -155,26 +191,6 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     } catch (err) {
       console.error('Failed to mark player ready:', err);
     }
-  }, []);
-
-  // Start countdown when player joins queue
-  const startCountdown = useCallback((tier: number) => {
-    if (countdownStartedRef.current) return;
-    countdownStartedRef.current = true;
-
-    setCountdown(COUNTDOWN_SECONDS);
-    countdownIntervalRef.current = setInterval(() => {
-      setCountdown(prev => {
-        if (prev === null || prev <= 1) {
-          if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   }, []);
 
   // Subscribe to queue changes for the selected tier
@@ -240,7 +256,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
     // Start countdown immediately (don't wait for database)
     // This ensures countdown shows even if Supabase connection fails
-    startCountdown(tier);
+    startCountdown();
 
     if (!isSupabaseAvailable()) {
       setError('Connection not ready. Please refresh the page.');
@@ -330,7 +346,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       setConnectionStatus('disconnected');
       setIsCurrentPlayerReady(false);
       queueEntryIdRef.current = null;
-      countdownStartedRef.current = false;
+      previousPlayerCountRef.current = 0;
     } catch (err) {
       console.error('Leave queue error:', err);
     }
