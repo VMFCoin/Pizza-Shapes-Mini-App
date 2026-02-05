@@ -21,7 +21,7 @@ const DOT_COLORS = ['#FF6B6B', '#4ECDC4', '#F7DC6F', '#BB8FCE', '#58D68D', '#5DA
 
 export default function HomePage() {
   const router = useRouter();
-  const { address, balance, isConnected, connect, isConnecting } = useWallet();
+  const { address, balance, isConnected, connect, isConnecting, isLoadingBalance } = useWallet();
   const { context, viewToken, viewProfile } = useFarcaster();
   const { stats: onChainStats, isLoading: statsLoading } = useOnChainStats(address);
 
@@ -304,7 +304,7 @@ export default function HomePage() {
 
           {/* Bottom buttons */}
           <div className="space-y-3">
-            {isConnected && !hasEnoughBalance ? (
+            {isConnected && !isLoadingBalance && !hasEnoughBalance ? (
               <motion.button
                 onClick={() => viewToken()}
                 className="w-full py-4 rounded-xl font-bold text-lg text-white"
@@ -316,13 +316,13 @@ export default function HomePage() {
                 whileTap={{ scale: 0.98 }}
               >
                 <span className="flex items-center justify-center gap-2">
-                  🍕 Buy $PIZZA to Play {currentTier.label}
+                  Buy $PIZZA to Play {currentTier.label}
                 </span>
               </motion.button>
             ) : (
               <motion.button
                 onClick={handlePlayNow}
-                disabled={isConnecting}
+                disabled={isConnecting || isLoadingBalance}
                 className="w-full py-4 rounded-xl font-bold text-lg text-white"
                 style={{
                   background: 'linear-gradient(135deg, #FF6B6B, #F7DC6F, #4ECDC4)',
@@ -331,7 +331,7 @@ export default function HomePage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                {isConnecting ? (
+                {isConnecting || isLoadingBalance ? (
                   <span className="flex items-center justify-center gap-2">
                     <motion.span
                       animate={{ rotate: 360 }}
