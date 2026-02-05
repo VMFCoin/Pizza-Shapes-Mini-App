@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { supabase, MatchQueueRow, PlayerRow } from '@/lib/supabase';
+import { supabase, isSupabaseAvailable, MatchQueueRow, PlayerRow } from '@/lib/supabase';
 import { Player, MatchID, ENTRY_TIERS } from '@/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -56,6 +56,10 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
   // Fetch queue players from database
   const refreshQueuePlayers = useCallback(async (tier: number) => {
+    if (!isSupabaseAvailable()) {
+      console.warn('Supabase client not initialized');
+      return;
+    }
     const { data, error: fetchError } = await supabase
       .from('match_queue')
       .select(`
@@ -134,7 +138,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
   // Mark current player as ready (after payment)
   const markPlayerReady = useCallback(async () => {
-    if (!queueEntryIdRef.current || !currentPlayerRef.current) return;
+    if (!isSupabaseAvailable() || !queueEntryIdRef.current || !currentPlayerRef.current) return;
 
     try {
       const { error: updateError } = await (supabase as any)
@@ -175,6 +179,12 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
   // Subscribe to queue changes for the selected tier
   const subscribeToQueue = useCallback(async (tier: number) => {
+    if (!isSupabaseAvailable()) {
+      console.warn('Supabase client not initialized');
+      setError('Connection not ready. Please refresh the page.');
+      return;
+    }
+
     // Clean up existing subscription
     if (channelRef.current) {
       await supabase.removeChannel(channelRef.current);
@@ -224,6 +234,11 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   // Join the matchmaking queue
   const joinQueue = useCallback(async (tier: number, player: Player) => {
     if (isInQueue || !player) return;
+
+    if (!isSupabaseAvailable()) {
+      setError('Connection not ready. Please refresh the page.');
+      return;
+    }
 
     setError(null);
     setSelectedTier(tier);
@@ -288,7 +303,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     if (!isInQueue) return;
 
     try {
-      if (queueEntryIdRef.current) {
+      if (isSupabaseAvailable() && queueEntryIdRef.current) {
         await (supabase as any)
           .from('match_queue')
           .update({ status: 'cancelled' })
@@ -296,7 +311,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       }
 
       // Clean up
-      if (channelRef.current) {
+      if (isSupabaseAvailable() && channelRef.current) {
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -323,7 +338,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (channelRef.current) {
+      if (isSupabaseAvailable() && channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
       if (countdownIntervalRef.current) {

@@ -2,17 +2,29 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Check if URL is valid (starts with http:// or https://)
-const isValidUrl = supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://');
-
-// Create a mock client or real client based on environment
+// Lazy initialization to ensure environment variables are available
 let supabaseClient: SupabaseClient<Database> | null = null;
 
-if (typeof window !== 'undefined' && isValidUrl && supabaseAnonKey) {
-  // Only create client on client-side with valid URL
+function getSupabaseClient(): SupabaseClient<Database> | null {
+  if (supabaseClient) return supabaseClient;
+
+  if (typeof window === 'undefined') return null;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || '';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
+
+  // Check if URL is valid (starts with http:// or https://)
+  const isValidUrl = supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://');
+
+  if (!isValidUrl || !supabaseAnonKey) {
+    console.warn('Supabase configuration missing or invalid:', {
+      hasUrl: !!supabaseUrl,
+      urlValid: isValidUrl,
+      hasKey: !!supabaseAnonKey
+    });
+    return null;
+  }
+
   supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     realtime: {
       params: {
@@ -20,10 +32,32 @@ if (typeof window !== 'undefined' && isValidUrl && supabaseAnonKey) {
       },
     },
   });
+
+  return supabaseClient;
 }
 
-// Export the client (may be null during static build or SSR)
-export const supabase = supabaseClient as SupabaseClient<Database>;
+// Export getter function and a proxy that lazily initializes
+export const supabase = new Proxy({} as SupabaseClient<Database>, {
+  get(_, prop) {
+    const client = getSupabaseClient();
+    if (!client) {
+      // Return a function that logs warning for method calls
+      if (typeof prop === 'string') {
+        return () => {
+          console.warn(`Supabase client not initialized. Cannot call ${prop}`);
+          return Promise.resolve({ data: null, error: new Error('Supabase not initialized') });
+        };
+      }
+      return undefined;
+    }
+    return (client as any)[prop];
+  }
+});
+
+// Also export a function to check if supabase is available
+export function isSupabaseAvailable(): boolean {
+  return getSupabaseClient() !== null;
+}
 
 // Database type definitions
 export type Database = {
