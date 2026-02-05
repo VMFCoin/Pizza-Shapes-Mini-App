@@ -230,6 +230,13 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Polka Dot Text Style - Made of dots */
+.polka-dot-text {
+  font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
 /* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, var(--game-primary), var(--game-secondary));

@@ -55,57 +55,23 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {/* Fun animated pizza logo */}
+            {/* Title - Large Polka Dot Style */}
             <motion.div
-              className="relative inline-block mb-4"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, type: "spring" }}
+              style={{ marginBottom: '6px' }}
             >
-              <span 
-                className="text-7xl block"
-                style={{ 
-                  filter: 'drop-shadow(0 8px 16px rgba(255, 107, 53, 0.4))',
-                }}
-              >
-                {"🍕"}
-              </span>
+              <DotText text="PIZZA" color="#FF6B35" size={3} />
             </motion.div>
-
-            {/* Title with playful keycap-style letters */}
-            <div className="flex items-center justify-center gap-2 mb-3">
-              {['P', 'I', 'Z', 'Z', 'A'].map((letter, i) => (
-                <motion.span
-                  key={i}
-                  className="keycap-primary text-xl px-3 py-2"
-                  initial={{ opacity: 0, y: -20, rotate: -10 }}
-                  animate={{ opacity: 1, y: 0, rotate: 0 }}
-                  transition={{ delay: i * 0.1, type: "spring", stiffness: 300 }}
-                  style={{ 
-                    display: 'inline-block',
-                    fontFamily: 'var(--font-lilita), cursive',
-                  }}
-                >
-                  {letter}
-                </motion.span>
-              ))}
-            </div>
-            <div className="flex items-center justify-center gap-2 mb-5">
-              {['D', 'O', 'T', 'S'].map((letter, i) => (
-                <motion.span
-                  key={i}
-                  className="keycap-teal text-lg px-3 py-2"
-                  initial={{ opacity: 0, y: -20, rotate: 10 }}
-                  animate={{ opacity: 1, y: 0, rotate: 0 }}
-                  transition={{ delay: 0.5 + i * 0.1, type: "spring", stiffness: 300 }}
-                  style={{ 
-                    display: 'inline-block',
-                    fontFamily: 'var(--font-lilita), cursive',
-                  }}
-                >
-                  {letter}
-                </motion.span>
-              ))}
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2, type: "spring" }}
+              className="mb-4"
+            >
+              <DotText text="DOTS" color="#4ECDC4" size={3} />
+            </motion.div>
 
             <p className="text-base text-stone-300 leading-relaxed">
               Connect the dots. Capture slices. Win{' '}
