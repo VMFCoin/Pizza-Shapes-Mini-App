@@ -119,7 +119,7 @@ export default function HomePage() {
                   animate={{ y: [0, -4, 0] }}
                   transition={{ duration: 1, repeat: Infinity }}
                 >
-                  {"🏆"}
+                  {"🍕"}
                 </motion.span>
                 <span className="text-xl font-bold text-game-light">Win</span>
                 <span className="text-xs text-stone-400">$PIZZA</span>
@@ -277,7 +277,7 @@ export default function HomePage() {
             <div className="flex gap-4" style={{ marginTop: '16px' }}>
               <motion.button
                 onClick={() => setShowFreeRoll(true)}
-                className="flex-1 keycap-secondary py-3 text-sm flex items-center justify-center gap-2"
+                className="flex-1 keycap-secondary py-3 text-sm flex items-center justify-center gap-2 rounded-2xl"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -286,7 +286,7 @@ export default function HomePage() {
               </motion.button>
               <motion.button
                 onClick={() => router.push('/leaderboard')}
-                className="flex-1 keycap-teal py-3 text-sm flex items-center justify-center gap-2"
+                className="flex-1 keycap-teal py-3 text-sm flex items-center justify-center gap-2 rounded-2xl"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
