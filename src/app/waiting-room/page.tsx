@@ -103,19 +103,19 @@ function WaitingRoomContent() {
   };
 
   return (
-    <main className="relative">
+    <main className="fixed inset-0 flex flex-col">
       <Background />
 
       {/* Header - Keycap style */}
-      <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-3 pt-4 safe-area-top bg-gradient-to-b from-game-dark via-game-dark/80 to-transparent">
+      <header className="shrink-0 w-full max-w-md mx-auto z-40 px-3 pt-4 safe-area-top bg-gradient-to-b from-game-dark via-game-dark/80 to-transparent">
         <div className="flex items-center justify-between">
           <PizzaShapesLogo />
           <WalletDisplayCompact balance={balance} onViewToken={() => viewToken()} />
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="pt-24 pb-80 px-3">
+      {/* Main content - scrollable area between header and footer */}
+      <div className="flex-1 overflow-y-auto px-3 pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="w-full max-w-md mx-auto space-y-4">
           {/* Error display - Keycap style */}
           {error && (
@@ -289,7 +289,7 @@ function WaitingRoomContent() {
       </div>
 
       {/* Bottom action bar - Keycap buttons */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-3 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
+      <div className="shrink-0 w-full max-w-md mx-auto px-3 pb-4 safe-area-bottom">
         <div className="card p-4 space-y-4">
           {/* Payment status message */}
           {isPaymentLoading(paymentState.step) && (
