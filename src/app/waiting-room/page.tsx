@@ -115,7 +115,7 @@ function WaitingRoomContent() {
       </header>
 
       {/* Main content */}
-      <div className="pt-24 pb-32 px-3 min-h-[100svh] flex flex-col justify-center">
+      <div className="pt-24 pb-52 px-3 overflow-y-auto">
         <div className="w-full max-w-md mx-auto space-y-4">
           {/* Error display - Keycap style */}
           {error && (

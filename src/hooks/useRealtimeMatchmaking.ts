@@ -48,6 +48,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentPlayerRef = useRef<Player | null>(currentPlayer);
   const previousPlayerCountRef = useRef<number>(0);
+  const isJoiningRef = useRef(false);
 
   // Keep currentPlayer ref updated
   useEffect(() => {
@@ -109,7 +110,15 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       return;
     }
 
-    const players: QueuePlayer[] = (data || []).map((entry: any) => ({
+    // Deduplicate by player_fid — keep only the latest entry per player
+    const seenFids = new Set<number>();
+    const uniqueEntries = (data || []).filter((entry: any) => {
+      if (seenFids.has(entry.player_fid)) return false;
+      seenFids.add(entry.player_fid);
+      return true;
+    });
+
+    const players: QueuePlayer[] = uniqueEntries.map((entry: any) => ({
       id: `player_${entry.player_fid}`,
       fid: entry.player_fid,
       displayName: entry.players?.display_name || `Player ${entry.player_fid}`,
@@ -249,7 +258,8 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
   // Join the matchmaking queue
   const joinQueue = useCallback(async (tier: number, player: Player) => {
-    if (isInQueue || !player) return;
+    if (isInQueue || isJoiningRef.current || !player) return;
+    isJoiningRef.current = true;
 
     setError(null);
     setSelectedTier(tier);
@@ -312,6 +322,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     } catch (err: any) {
       setError(err.message || 'Failed to join queue');
       console.error('Join queue error:', err);
+      isJoiningRef.current = false;
     }
   }, [isInQueue, subscribeToQueue, refreshQueuePlayers, startCountdown]);
 
@@ -347,6 +358,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       setIsCurrentPlayerReady(false);
       queueEntryIdRef.current = null;
       previousPlayerCountRef.current = 0;
+      isJoiningRef.current = false;
     } catch (err) {
       console.error('Leave queue error:', err);
     }
