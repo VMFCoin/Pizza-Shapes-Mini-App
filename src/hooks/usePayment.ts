@@ -86,6 +86,17 @@ export function usePayment(): UsePaymentReturn {
     }
 
     const settlementAddress = CONTRACTS.settlement as Address;
+    const zeroAddress = '0x0000000000000000000000000000000000000000';
+
+    // Validate settlement contract is configured
+    if (!settlementAddress || settlementAddress === zeroAddress) {
+      setPaymentState({
+        step: 'error',
+        error: 'Settlement contract not configured. Please contact the developer.',
+      });
+      return false;
+    }
+
     const entryAmount = tierToAmount(tier);
 
     try {
