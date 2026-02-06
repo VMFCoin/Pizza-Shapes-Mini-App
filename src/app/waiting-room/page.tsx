@@ -103,7 +103,7 @@ function WaitingRoomContent() {
   };
 
   return (
-    <main className="min-h-[100svh] relative">
+    <main className="relative">
       <Background />
 
       {/* Header - Keycap style */}
@@ -115,7 +115,7 @@ function WaitingRoomContent() {
       </header>
 
       {/* Main content */}
-      <div className="pt-24 pb-52 px-3 overflow-y-auto">
+      <div className="pt-24 pb-52 px-3">
         <div className="w-full max-w-md mx-auto space-y-4">
           {/* Error display - Keycap style */}
           {error && (
