@@ -218,12 +218,12 @@ export function useWallet(): UseWalletReturn {
         ? matchId as `0x${string}`
         : `0x${matchId.padEnd(64, '0')}` as `0x${string}`;
 
-      // Step 3: Enter match
+      // Step 3: Enter match (V3: pass amount instead of tier)
       writeContract({
         address: CONTRACTS.settlement as Address,
         abi: SETTLEMENT_ABI,
         functionName: 'enterMatch',
-        args: [matchIdBytes, tier],
+        args: [matchIdBytes, amount],
       });
 
       return { status: 'pending_confirmation' };

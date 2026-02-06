@@ -32,6 +32,7 @@ export interface MatchSettlementInfo {
   tier: number;
   winner: Address;
   totalPool: bigint;
+  priceUsd?: number;
 }
 
 interface UseSettlementReturn {
@@ -71,10 +72,10 @@ export function useSettlement(): UseSettlementReturn {
 
   // Calculate settlement preview before on-chain execution
   const getSettlementPreview = useCallback((matchInfo: MatchSettlementInfo): SettlementResult => {
-    const { matchId, winner, tier, players } = matchInfo;
+    const { matchId, winner, tier, players, priceUsd } = matchInfo;
 
     // Calculate total pool
-    const entryAmount = tierToAmount(tier);
+    const entryAmount = tierToAmount(tier, priceUsd);
     const totalPool = entryAmount * BigInt(players.length);
 
     // Calculate distributions (basis points)
@@ -207,8 +208,8 @@ export function getCharityInfo() {
 }
 
 // Helper: Calculate what a winner receives for a given entry
-export function calculateWinnerPrize(tier: number, playerCount: number): bigint {
-  const entryAmount = tierToAmount(tier);
+export function calculateWinnerPrize(tier: number, playerCount: number, priceUsd?: number): bigint {
+  const entryAmount = tierToAmount(tier, priceUsd);
   const totalPool = entryAmount * BigInt(playerCount);
   return (totalPool * BigInt(PRIZE_DISTRIBUTION.winner)) / BigInt(10000);
 }

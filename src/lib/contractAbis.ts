@@ -140,11 +140,11 @@ export const SETTLEMENT_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
-  // Enter match
+  // Enter match (V3: dynamic amount instead of tier)
   {
     inputs: [
       { name: 'matchId', type: 'bytes32' },
-      { name: 'tier', type: 'uint8' },
+      { name: 'amount', type: 'uint256' },
     ],
     name: 'enterMatch',
     outputs: [],

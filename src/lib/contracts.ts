@@ -1,4 +1,5 @@
 import { PIZZA_TOKEN_ADDRESS } from '@/types';
+import { usdToPizzaAmount } from '@/lib/priceService';
 
 // Contract addresses (to be deployed)
 export const PIZZA_DOTS_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Update after deployment
@@ -198,18 +199,34 @@ export const PIZZA_DOTS_ABI = [
   },
 ] as const;
 
-// Helper to convert entry tier to contract amount
-export function tierToAmount(tier: number): bigint {
-  switch (tier) {
-    case 1:
-      return BigInt('250000000000000000'); // 0.25 * 10^18
-    case 2:
-      return BigInt('500000000000000000'); // 0.50 * 10^18
-    case 3:
-      return BigInt('1000000000000000000'); // 1.00 * 10^18
-    default:
-      return BigInt(0);
+// USD amounts per tier
+const TIER_USD: Record<number, number> = {
+  1: 0.25,
+  2: 0.50,
+  3: 1.00,
+};
+
+/**
+ * Convert entry tier to PIZZA token amount using live USD price.
+ * If no priceUsd provided, returns null (price required for V3 contract).
+ */
+export function tierToAmount(tier: number, priceUsd?: number): bigint {
+  const usdAmount = TIER_USD[tier];
+  if (!usdAmount) return BigInt(0);
+
+  if (!priceUsd || priceUsd <= 0) {
+    // Fallback: return 0 — caller must have a valid price
+    return BigInt(0);
   }
+
+  return usdToPizzaAmount(usdAmount, priceUsd);
+}
+
+/**
+ * Get the USD amount for a tier (for display purposes)
+ */
+export function tierToUsdAmount(tier: number): number {
+  return TIER_USD[tier] || 0;
 }
 
 // Generate match ID from parameters

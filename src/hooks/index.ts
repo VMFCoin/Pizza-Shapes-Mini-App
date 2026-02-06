@@ -8,3 +8,4 @@ export { useLeaderboard, usePlayerStats } from './useLeaderboard';
 export { usePayment, getPaymentStepMessage, isPaymentLoading } from './usePayment';
 export { useSettlement, getCharityInfo, calculateWinnerPrize, getDistributionBreakdown } from './useSettlement';
 export { useOnChainStats } from './useOnChainStats';
+export { usePizzaPrice } from './usePizzaPrice';

@@ -9,10 +9,11 @@ interface PrizeDistributionProps {
   tier: number;
   playerCount: number;
   showCharities?: boolean;
+  priceUsd?: number;
 }
 
-export function PrizeDistribution({ tier, playerCount, showCharities = false }: PrizeDistributionProps) {
-  const entryAmount = tierToAmount(tier);
+export function PrizeDistribution({ tier, playerCount, showCharities = false, priceUsd }: PrizeDistributionProps) {
+  const entryAmount = tierToAmount(tier, priceUsd);
   const totalPool = entryAmount * BigInt(playerCount);
 
   const formatPizza = (amount: bigint): string => {
@@ -160,8 +161,8 @@ export function PrizeDistribution({ tier, playerCount, showCharities = false }: 
 }
 
 // Compact version for entry confirmation
-export function PrizeDistributionCompact({ tier, playerCount }: { tier: number; playerCount: number }) {
-  const entryAmount = tierToAmount(tier);
+export function PrizeDistributionCompact({ tier, playerCount, priceUsd }: { tier: number; playerCount: number; priceUsd?: number }) {
+  const entryAmount = tierToAmount(tier, priceUsd);
   const totalPool = entryAmount * BigInt(playerCount);
   const winnerPrize = (totalPool * BigInt(PRIZE_DISTRIBUTION.winner)) / BigInt(10000);
 

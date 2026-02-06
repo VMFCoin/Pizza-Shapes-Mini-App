@@ -184,7 +184,44 @@ async function main() {
   console.log("4. Approve vaults to allow settlement contract to transfer tokens");
 }
 
-main()
+// Upgrade Settlement from V2 → V3 (dynamic entry amounts)
+async function upgradeSettlementV3() {
+  const SETTLEMENT_PROXY = process.env.NEXT_PUBLIC_SETTLEMENT_CONTRACT;
+  if (!SETTLEMENT_PROXY) {
+    throw new Error("NEXT_PUBLIC_SETTLEMENT_CONTRACT not set in environment");
+  }
+
+  const [deployer] = await ethers.getSigners();
+
+  console.log("=".repeat(60));
+  console.log("Settlement V2 → V3 Upgrade");
+  console.log("=".repeat(60));
+  console.log(`Deployer: ${deployer.address}`);
+  console.log(`Proxy: ${SETTLEMENT_PROXY}`);
+  console.log("=".repeat(60));
+
+  const SettlementV3Factory = await ethers.getContractFactory("PizzaShapesSettlementV3");
+  const upgraded = await upgrades.upgradeProxy(SETTLEMENT_PROXY, SettlementV3Factory);
+  await upgraded.waitForDeployment();
+
+  const implAddress = await upgrades.erc1967.getImplementationAddress(SETTLEMENT_PROXY);
+  console.log(`\nUpgrade complete!`);
+  console.log(`Proxy (unchanged): ${SETTLEMENT_PROXY}`);
+  console.log(`New implementation: ${implAddress}`);
+  console.log("\nenterMatch now accepts (bytes32 matchId, uint256 amount)");
+  console.log("=".repeat(60));
+}
+
+// Uncomment to run full deployment:
+// main()
+//   .then(() => process.exit(0))
+//   .catch((error) => {
+//     console.error(error);
+//     process.exit(1);
+//   });
+
+// Run V3 upgrade:
+upgradeSettlementV3()
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);

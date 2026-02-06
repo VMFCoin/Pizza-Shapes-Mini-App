@@ -10,10 +10,12 @@ import {
   WalletDisplayCompact,
 } from '@/components';
 import { useWallet, useFarcaster, usePayment } from '@/hooks';
+import { usePizzaPrice } from '@/hooks/usePizzaPrice';
 import { useRealtimeMatchmaking } from '@/hooks/useRealtimeMatchmaking';
 import { getPaymentStepMessage, isPaymentLoading } from '@/hooks/usePayment';
 import { ENTRY_TIERS, Player } from '@/types';
-import { type Address } from 'viem';
+import { type Address, formatUnits } from 'viem';
+import { tierToAmount } from '@/lib/contracts';
 
 function WaitingRoomContent() {
   const router = useRouter();
@@ -24,6 +26,7 @@ function WaitingRoomContent() {
   const { address, balance, isConnected } = useWallet();
   const { context, viewToken, viewProfile } = useFarcaster();
   const { paymentState, enterMatchWithPayment, formatPizzaAmount, resetPayment } = usePayment();
+  const { priceUsd, isLoading: isPriceLoading, error: priceError, usdToPizza } = usePizzaPrice();
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
@@ -57,6 +60,14 @@ function WaitingRoomContent() {
 
   const currentTier = ENTRY_TIERS.find(t => t.id === tier);
 
+  // Calculate PIZZA equivalent for current tier
+  const pizzaEquivalent = priceUsd
+    ? tierToAmount(tier, priceUsd)
+    : null;
+  const pizzaEquivalentDisplay = pizzaEquivalent && pizzaEquivalent > BigInt(0)
+    ? Number(formatUnits(pizzaEquivalent, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 })
+    : null;
+
   // Auto-join queue when page loads
   useEffect(() => {
     if (currentPlayer && !isInQueue && isConnected) {
@@ -77,6 +88,10 @@ function WaitingRoomContent() {
   const handleEnterGame = async () => {
     if (!address || !currentPlayer || isProcessingPayment) return;
 
+    if (!priceUsd) {
+      return; // Price not loaded yet — button should be disabled
+    }
+
     setIsProcessingPayment(true);
     resetPayment();
 
@@ -84,7 +99,7 @@ function WaitingRoomContent() {
       // Generate a match ID for payment tracking
       const paymentMatchId = `match_${Date.now()}_${tier}`;
 
-      const success = await enterMatchWithPayment(paymentMatchId, tier, address as Address);
+      const success = await enterMatchWithPayment(paymentMatchId, tier, address as Address, priceUsd);
 
       if (success) {
         // Mark player as ready in the queue
@@ -320,6 +335,21 @@ function WaitingRoomContent() {
             </motion.div>
           )}
 
+          {/* Price error */}
+          {priceError && (
+            <motion.div
+              className="rounded-xl p-3 text-center"
+              style={{
+                background: 'rgba(255, 107, 107, 0.15)',
+                border: '1px solid rgba(255, 107, 107, 0.3)',
+              }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-sm text-red-400 font-medium">Unable to fetch PIZZA price. Cannot enter game.</p>
+            </motion.div>
+          )}
+
           {/* Enter Game / Ready button - Keycap style */}
           {isCurrentPlayerReady ? (
             <motion.div
@@ -337,17 +367,26 @@ function WaitingRoomContent() {
               </span>
             </motion.div>
           ) : (
-            <motion.button
-              onClick={handleEnterGame}
-              className="w-full btn-primary py-4 text-base"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              disabled={isProcessingPayment || countdown === 0}
-            >
-              {isProcessingPayment
-                ? 'Processing...'
-                : `Enter Game - $${currentTier?.amount.toFixed(2) || '0.50'}`}
-            </motion.button>
+            <div>
+              <motion.button
+                onClick={handleEnterGame}
+                className="w-full btn-primary py-4 text-base"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={isProcessingPayment || countdown === 0 || !priceUsd || isPriceLoading}
+              >
+                {isProcessingPayment
+                  ? 'Processing...'
+                  : isPriceLoading
+                    ? 'Loading price...'
+                    : `Enter Game - $${currentTier?.amount.toFixed(2) || '0.50'}`}
+              </motion.button>
+              {pizzaEquivalentDisplay && (
+                <p className="text-xs text-stone-500 text-center mt-1">
+                  ~{pizzaEquivalentDisplay} PIZZA at current price
+                </p>
+              )}
+            </div>
           )}
 
           {/* Leave Queue button - only show if not ready */}

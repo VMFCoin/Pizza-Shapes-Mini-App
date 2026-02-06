@@ -1,7 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { formatUnits } from 'viem';
 import { ENTRY_TIERS, EntryTier } from '@/types';
+import { tierToAmount } from '@/lib/contracts';
 
 // Tier colors for keycap styling
 const TIER_COLORS = {
@@ -14,12 +16,14 @@ interface EntryTierSelectorProps {
   selectedTier: number;
   onSelectTier: (tierId: number) => void;
   disabled?: boolean;
+  priceUsd?: number | null;
 }
 
 export function EntryTierSelector({
   selectedTier,
   onSelectTier,
   disabled = false,
+  priceUsd,
 }: EntryTierSelectorProps) {
   return (
     <div className="card w-full max-w-md">
@@ -27,15 +31,22 @@ export function EntryTierSelector({
         Select Entry Tier
       </h3>
       <div className="grid grid-cols-3 gap-3">
-        {ENTRY_TIERS.map((tier) => (
-          <TierCard
-            key={tier.id}
-            tier={tier}
-            isSelected={selectedTier === tier.id}
-            onSelect={() => !disabled && onSelectTier(tier.id)}
-            disabled={disabled}
-          />
-        ))}
+        {ENTRY_TIERS.map((tier) => {
+          const pizzaAmount = priceUsd ? tierToAmount(tier.id, priceUsd) : null;
+          const pizzaDisplay = pizzaAmount && pizzaAmount > BigInt(0)
+            ? `~${Number(formatUnits(pizzaAmount, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 })} PIZZA`
+            : null;
+          return (
+            <TierCard
+              key={tier.id}
+              tier={tier}
+              isSelected={selectedTier === tier.id}
+              onSelect={() => !disabled && onSelectTier(tier.id)}
+              disabled={disabled}
+              pizzaDisplay={pizzaDisplay}
+            />
+          );
+        })}
       </div>
       <p className="text-xs text-stone-400 text-center mt-3">
         Higher stakes = bigger prizes!
@@ -49,11 +60,13 @@ function TierCard({
   isSelected,
   onSelect,
   disabled,
+  pizzaDisplay,
 }: {
   tier: EntryTier;
   isSelected: boolean;
   onSelect: () => void;
   disabled: boolean;
+  pizzaDisplay?: string | null;
 }) {
   const colors = TIER_COLORS[tier.id as keyof typeof TIER_COLORS] || TIER_COLORS[1];
   
@@ -104,6 +117,13 @@ function TierCard({
           ? `${tier.maxPlayers} players`
           : `${tier.minPlayers}-${tier.maxPlayers} players`}
       </p>
+
+      {/* PIZZA equivalent */}
+      {pizzaDisplay && (
+        <p className={`text-[10px] mt-1 ${isSelected ? 'opacity-60' : 'text-stone-600'}`}>
+          {pizzaDisplay}
+        </p>
+      )}
 
       {/* Selected indicator - keycap badge */}
       {isSelected && (

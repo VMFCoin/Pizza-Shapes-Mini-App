@@ -40,8 +40,8 @@ export interface PrizeBreakdown {
 
 interface UsePaymentReturn {
   paymentState: PaymentState;
-  enterMatchWithPayment: (matchId: string, tier: number, address: Address) => Promise<boolean>;
-  calculatePrizeBreakdown: (tier: number, playerCount: number) => PrizeBreakdown;
+  enterMatchWithPayment: (matchId: string, tier: number, address: Address, priceUsd: number) => Promise<boolean>;
+  calculatePrizeBreakdown: (entryAmount: bigint, playerCount: number) => PrizeBreakdown;
   formatPizzaAmount: (amount: bigint) => string;
   resetPayment: () => void;
 }
@@ -51,9 +51,8 @@ export function usePayment(): UsePaymentReturn {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
-  // Calculate prize breakdown based on tier and player count
-  const calculatePrizeBreakdown = useCallback((tier: number, playerCount: number): PrizeBreakdown => {
-    const entryAmount = tierToAmount(tier);
+  // Calculate prize breakdown based on entry amount and player count
+  const calculatePrizeBreakdown = useCallback((entryAmount: bigint, playerCount: number): PrizeBreakdown => {
     const totalPool = entryAmount * BigInt(playerCount);
 
     return {
@@ -78,7 +77,8 @@ export function usePayment(): UsePaymentReturn {
   const enterMatchWithPayment = useCallback(async (
     matchId: string,
     tier: number,
-    address: Address
+    address: Address,
+    priceUsd: number
   ): Promise<boolean> => {
     if (!publicClient || !walletClient) {
       setPaymentState({ step: 'error', error: 'Wallet not connected' });
@@ -97,7 +97,16 @@ export function usePayment(): UsePaymentReturn {
       return false;
     }
 
-    const entryAmount = tierToAmount(tier);
+    // Calculate dynamic PIZZA amount based on live USD price
+    const entryAmount = tierToAmount(tier, priceUsd);
+
+    if (entryAmount === BigInt(0)) {
+      setPaymentState({
+        step: 'error',
+        error: 'Unable to calculate entry amount. Price data unavailable.',
+      });
+      return false;
+    }
 
     try {
       // Step 1: Check balance
@@ -134,8 +143,7 @@ export function usePayment(): UsePaymentReturn {
       if (allowance < entryAmount) {
         setPaymentState({ step: 'requesting_approval' });
 
-        // Request approval for exact amount (or unlimited)
-        const approvalAmount = entryAmount; // Could use MaxUint256 for unlimited
+        const approvalAmount = entryAmount;
 
         const approvalHash = await walletClient.writeContract({
           address: PIZZA_TOKEN as Address,
@@ -163,7 +171,7 @@ export function usePayment(): UsePaymentReturn {
         setPaymentState({ step: 'approval_confirmed', approvalHash });
       }
 
-      // Step 4: Enter match
+      // Step 4: Enter match — V3 contract: enterMatch(bytes32, uint256)
       setPaymentState({ step: 'requesting_payment' });
 
       // Convert matchId to bytes32
@@ -175,7 +183,7 @@ export function usePayment(): UsePaymentReturn {
         address: settlementAddress,
         abi: SETTLEMENT_ABI,
         functionName: 'enterMatch',
-        args: [matchIdBytes, tier],
+        args: [matchIdBytes, entryAmount],
       });
 
       setPaymentState({ step: 'confirming_payment', paymentHash });
@@ -195,8 +203,7 @@ export function usePayment(): UsePaymentReturn {
       }
 
       // Calculate prize breakdown for display
-      // Assume 2 players minimum for now (will be updated as players join)
-      const prizeBreakdown = calculatePrizeBreakdown(tier, 2);
+      const prizeBreakdown = calculatePrizeBreakdown(entryAmount, 2);
 
       setPaymentState({
         step: 'success',
