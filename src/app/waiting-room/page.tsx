@@ -31,6 +31,7 @@ function WaitingRoomContent() {
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isAddingBot, setIsAddingBot] = useState(false);
+  const [botError, setBotError] = useState<string | null>(null);
   const addBotCalledRef = useRef(false);
 
   // Create current player from context
@@ -80,9 +81,10 @@ function WaitingRoomContent() {
 
   // Add bot and start match when only 1 player is ready
   const addBotAndStartMatch = useCallback(async () => {
-    if (isAddingBot || addBotCalledRef.current || !currentPlayer) return;
+    if (addBotCalledRef.current || !currentPlayer) return;
     addBotCalledRef.current = true;
     setIsAddingBot(true);
+    setBotError(null);
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('add-bot-player', {
         body: { tier, humanFid: currentPlayer.fid },
@@ -93,11 +95,12 @@ function WaitingRoomContent() {
       }
     } catch (err) {
       console.error('Failed to add bot:', err);
-      addBotCalledRef.current = false;
+      setBotError('Failed to add bot opponent. Please try again.');
+      // Do NOT reset addBotCalledRef — prevents infinite retry loop
     } finally {
       setIsAddingBot(false);
     }
-  }, [isAddingBot, currentPlayer, tier, router]);
+  }, [currentPlayer, tier, router]);
 
   // Navigate to game when countdown reaches 0 and player is ready
   useEffect(() => {
@@ -214,9 +217,11 @@ function WaitingRoomContent() {
               {countdown !== null && countdown > 0
                 ? `Game starts in ${countdown}s`
                 : countdown === 0
-                  ? (isAddingBot
-                    ? 'Adding bot opponent...'
-                    : isCurrentPlayerReady ? 'Starting...' : "Time's up!")
+                  ? (botError
+                    ? 'Bot setup failed'
+                    : isAddingBot
+                      ? 'Adding bot opponent...'
+                      : isCurrentPlayerReady ? 'Starting...' : "Time's up!")
                   : 'Finding Players...'}
             </h2>
             <p className="text-stone-400 text-sm">
@@ -233,6 +238,25 @@ function WaitingRoomContent() {
               >
                 <span>{"✓"}</span>
                 {readyPlayerCount} player{readyPlayerCount !== 1 ? 's' : ''} ready
+              </div>
+            )}
+            {botError && (
+              <div className="mt-3 space-y-2">
+                <p className="text-red-400 text-xs">{botError}</p>
+                <button
+                  onClick={() => {
+                    addBotCalledRef.current = false;
+                    setBotError(null);
+                    addBotAndStartMatch();
+                  }}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold text-white"
+                  style={{
+                    background: 'linear-gradient(180deg, #FF6B6B 0%, #E05555 100%)',
+                    boxShadow: '0 2px 0 0 #B34444',
+                  }}
+                >
+                  Retry
+                </button>
               </div>
             )}
             {countdown !== null && countdown > 0 && (
