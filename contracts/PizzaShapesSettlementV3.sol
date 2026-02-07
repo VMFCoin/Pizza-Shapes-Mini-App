@@ -105,7 +105,22 @@ contract PizzaShapesSettlementV3 is PizzaUUPSBase {
     error TransferFailed();
     error InsufficientPoolBalance();
 
-    // Note: No new initialize() — this is a UUPS upgrade, state is preserved from V2
+    function initialize(
+        address pizzaToken,
+        address _statsContract,
+        address _weeklyVault,
+        address _freeRollVault,
+        address[9] memory _charityWallets,
+        address admin
+    ) external initializer {
+        __PizzaUUPSBase_init(admin);
+
+        pizza = IPizzaToken(pizzaToken);
+        statsContract = IPizzaDotsStats(_statsContract);
+        weeklyVault = _weeklyVault;
+        freeRollVault = _freeRollVault;
+        charityWallets = _charityWallets;
+    }
 
     /**
      * @notice Set minimum entry amount (admin only)
