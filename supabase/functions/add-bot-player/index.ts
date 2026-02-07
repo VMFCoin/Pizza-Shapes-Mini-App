@@ -140,21 +140,20 @@ serve(async (req) => {
       .update({ status: 'matched', match_id: match.id })
       .eq('id', humanEntry.id);
 
-    // Activate match after brief countdown
-    setTimeout(async () => {
-      try {
-        await supabase
-          .from('matches')
-          .update({
-            status: 'active',
-            started_at: new Date().toISOString(),
-          })
-          .eq('id', match.id)
-          .eq('status', 'countdown');
-      } catch (err) {
-        console.error('Failed to activate match:', err);
-      }
-    }, 3000);
+    // Activate match immediately — no countdown needed for bot matches
+    // (setTimeout won't reliably run after the response is sent in edge functions)
+    const { error: activateError } = await supabase
+      .from('matches')
+      .update({
+        status: 'active',
+        started_at: new Date().toISOString(),
+      })
+      .eq('id', match.id)
+      .eq('status', 'countdown');
+
+    if (activateError) {
+      console.error('Failed to activate match:', activateError);
+    }
 
     return new Response(
       JSON.stringify({

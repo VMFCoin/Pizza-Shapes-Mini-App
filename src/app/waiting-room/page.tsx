@@ -102,19 +102,19 @@ function WaitingRoomContent() {
     }
   }, [currentPlayer, tier, router]);
 
-  // Navigate to game when countdown reaches 0 and player is ready
+  // Navigate to game when a real match is created by server-side matchmaking
   useEffect(() => {
-    if (countdown === 0 && isCurrentPlayerReady) {
-      if (readyPlayerCount >= 2) {
-        // Enough human players — create normal match
-        const newMatchId = `match_${Date.now()}_${tier}`;
-        router.push(`/game?matchId=${newMatchId}&tier=${tier}`);
-      } else if (readyPlayerCount === 1) {
-        // Only 1 ready player — add bot opponent
-        addBotAndStartMatch();
-      }
+    if (isMatchReady && matchId) {
+      router.push(`/game?matchId=${matchId}&tier=${tier}`);
     }
-  }, [countdown, isCurrentPlayerReady, readyPlayerCount, tier, router, addBotAndStartMatch]);
+  }, [isMatchReady, matchId, tier, router]);
+
+  // When countdown reaches 0 with only 1 ready player, add bot opponent
+  useEffect(() => {
+    if (countdown === 0 && isCurrentPlayerReady && readyPlayerCount === 1) {
+      addBotAndStartMatch();
+    }
+  }, [countdown, isCurrentPlayerReady, readyPlayerCount, addBotAndStartMatch]);
 
   // Handle Enter Game payment
   const handleEnterGame = async () => {

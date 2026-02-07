@@ -95,7 +95,7 @@ export function PizzaShapesLogo({ className = '' }: { className?: string }) {
       <div>
         <h1 className="text-2xl font-bold text-white leading-none">
           Pizza
-          <span className="text-game-secondary"> Shapes</span>
+          <span className="text-game-secondary"> Dots</span>
         </h1>
         <p className="text-xs text-gray-400">Dots & Boxes, but tastier</p>
       </div>

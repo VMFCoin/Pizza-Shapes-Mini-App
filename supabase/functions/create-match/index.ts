@@ -114,23 +114,20 @@ serve(async (req) => {
       // Non-fatal error, continue
     }
 
-    // Schedule match to start after countdown (5 seconds)
-    // In Supabase Edge Functions, we use setTimeout equivalent
-    // Note: For production, consider using pg_cron or a separate worker
-    setTimeout(async () => {
-      try {
-        await supabase
-          .from('matches')
-          .update({
-            status: 'active',
-            started_at: new Date().toISOString(),
-          })
-          .eq('id', match.id)
-          .eq('status', 'countdown'); // Only update if still in countdown
-      } catch (err) {
-        console.error('Failed to start match:', err);
-      }
-    }, 5000);
+    // Activate match immediately — setTimeout won't reliably run after
+    // the response is sent in Deno edge functions
+    const { error: activateError } = await supabase
+      .from('matches')
+      .update({
+        status: 'active',
+        started_at: new Date().toISOString(),
+      })
+      .eq('id', match.id)
+      .eq('status', 'countdown');
+
+    if (activateError) {
+      console.error('Failed to activate match:', activateError);
+    }
 
     return new Response(
       JSON.stringify({

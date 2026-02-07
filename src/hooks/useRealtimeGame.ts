@@ -214,17 +214,17 @@ export function useRealtimeGame(
 
     setGameState(prev => {
       if (!prev) return prev;
-      return {
+      const updated = {
         ...prev,
         currentPlayerIndex: match.current_player_index,
         turnNumber: match.turn_number,
         gameOver: match.status === 'completed',
         winner: match.winner_fid ? `player_${match.winner_fid}` : null,
       };
+      setGamePhase(determinePhase(updated, match.status));
+      return updated;
     });
-
-    setGamePhase(determinePhase(gameState, match.status));
-  }, [gameState, determinePhase]);
+  }, [determinePhase]);
 
   // Handle player connection status updates
   const handleMatchPlayerUpdate = useCallback((payload: any) => {
@@ -493,10 +493,16 @@ export function useRealtimeGame(
     };
   }, [gameState, optimisticEdges]);
 
-  // Initialize on mount
+  // Fetch game state on mount / matchId change
   useEffect(() => {
     if (matchId) {
       fetchGameState();
+    }
+  }, [matchId, fetchGameState]);
+
+  // Subscribe to realtime updates (separate effect to avoid re-subscribing on every state change)
+  useEffect(() => {
+    if (matchId) {
       subscribeToGame();
     }
 
@@ -511,7 +517,8 @@ export function useRealtimeGame(
         clearTimeout(reconnectTimerRef.current);
       }
     };
-  }, [matchId, fetchGameState, subscribeToGame]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, currentPlayerFid]);
 
   // Update player connection status on visibility change
   useEffect(() => {
