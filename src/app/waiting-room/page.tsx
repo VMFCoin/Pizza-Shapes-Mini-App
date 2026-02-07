@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -16,6 +16,7 @@ import { getPaymentStepMessage, isPaymentLoading } from '@/hooks/usePayment';
 import { ENTRY_TIERS, Player } from '@/types';
 import { type Address, formatUnits } from 'viem';
 import { tierToAmount } from '@/lib/contracts';
+import { supabase } from '@/lib/supabase';
 
 function WaitingRoomContent() {
   const router = useRouter();
@@ -29,6 +30,8 @@ function WaitingRoomContent() {
   const { priceUsd, isLoading: isPriceLoading, error: priceError, usdToPizza } = usePizzaPrice();
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isAddingBot, setIsAddingBot] = useState(false);
+  const addBotCalledRef = useRef(false);
 
   // Create current player from context
   const currentPlayer: Player | null = context
@@ -75,14 +78,40 @@ function WaitingRoomContent() {
     }
   }, [currentPlayer, isInQueue, isConnected, tier, joinQueue]);
 
+  // Add bot and start match when only 1 player is ready
+  const addBotAndStartMatch = useCallback(async () => {
+    if (isAddingBot || addBotCalledRef.current || !currentPlayer) return;
+    addBotCalledRef.current = true;
+    setIsAddingBot(true);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('add-bot-player', {
+        body: { tier, humanFid: currentPlayer.fid },
+      });
+      if (invokeError) throw invokeError;
+      if (data?.matchId) {
+        router.push(`/game?matchId=${data.matchId}&tier=${tier}`);
+      }
+    } catch (err) {
+      console.error('Failed to add bot:', err);
+      addBotCalledRef.current = false;
+    } finally {
+      setIsAddingBot(false);
+    }
+  }, [isAddingBot, currentPlayer, tier, router]);
+
   // Navigate to game when countdown reaches 0 and player is ready
   useEffect(() => {
-    if (countdown === 0 && isCurrentPlayerReady && readyPlayerCount >= 2) {
-      // Generate a match ID for the ready players
-      const newMatchId = `match_${Date.now()}_${tier}`;
-      router.push(`/game?matchId=${newMatchId}&tier=${tier}`);
+    if (countdown === 0 && isCurrentPlayerReady) {
+      if (readyPlayerCount >= 2) {
+        // Enough human players — create normal match
+        const newMatchId = `match_${Date.now()}_${tier}`;
+        router.push(`/game?matchId=${newMatchId}&tier=${tier}`);
+      } else if (readyPlayerCount === 1) {
+        // Only 1 ready player — add bot opponent
+        addBotAndStartMatch();
+      }
     }
-  }, [countdown, isCurrentPlayerReady, readyPlayerCount, tier, router]);
+  }, [countdown, isCurrentPlayerReady, readyPlayerCount, tier, router, addBotAndStartMatch]);
 
   // Handle Enter Game payment
   const handleEnterGame = async () => {
@@ -185,7 +214,9 @@ function WaitingRoomContent() {
               {countdown !== null && countdown > 0
                 ? `Game starts in ${countdown}s`
                 : countdown === 0
-                  ? (isCurrentPlayerReady ? 'Starting...' : "Time's up!")
+                  ? (isAddingBot
+                    ? 'Adding bot opponent...'
+                    : isCurrentPlayerReady ? 'Starting...' : "Time's up!")
                   : 'Finding Players...'}
             </h2>
             <p className="text-stone-400 text-sm">

@@ -359,9 +359,11 @@ function GameContent() {
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                 >
-                  {"🎲"}
+                  {currentPlayer?.isBot ? "🤖" : "🎲"}
                 </motion.span>
-                Waiting for {currentPlayer?.displayName}...
+                {currentPlayer?.isBot
+                  ? 'Bot is thinking...'
+                  : `Waiting for ${currentPlayer?.displayName}...`}
               </motion.p>
             </div>
           )}

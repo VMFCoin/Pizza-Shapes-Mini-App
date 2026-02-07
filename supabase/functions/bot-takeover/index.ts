@@ -1,7 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { DISCONNECT_TIMEOUT_MS } from '../_shared/constants.ts';
-import { Edge, countAvailableMoves } from '../_shared/gridUtils.ts';
+import { Edge, PizzaSlice, countAvailableMoves } from '../_shared/gridUtils.ts';
+import { chooseBestEdge } from '../_shared/botStrategy.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -143,14 +144,25 @@ async function executeBotTurn(supabase: any, matchId: string, botFid: number) {
 
   if (!updatedState) return;
 
-  // Simple bot strategy: draw available edges until no moves remaining
-  let movesRemaining = updatedState.moves_remaining;
-  const updatedEdges = updatedState.edges as Edge[];
+  // Smart bot strategy: use chooseBestEdge for intelligent play
+  const botPlayerId = `player_${botFid}`;
+  let continueDrawing = true;
 
-  while (movesRemaining > 0) {
-    // Find first available edge
-    const availableEdge = updatedEdges.find((e: Edge) => e.claimedBy === null);
-    if (!availableEdge) break;
+  while (continueDrawing) {
+    // Re-fetch game state for latest board after each move
+    const { data: latestState } = await supabase
+      .from('game_states')
+      .select('*')
+      .eq('match_id', matchId)
+      .single();
+
+    if (!latestState || latestState.moves_remaining <= 0) break;
+
+    const currentEdges = latestState.edges as Edge[];
+    const currentSlices = latestState.possible_slices as PizzaSlice[];
+
+    const bestEdgeId = chooseBestEdge(currentEdges, currentSlices, botPlayerId);
+    if (!bestEdgeId) break;
 
     try {
       const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/validate-move`, {
@@ -163,7 +175,7 @@ async function executeBotTurn(supabase: any, matchId: string, botFid: number) {
           matchId,
           playerFid: botFid,
           moveType: 'draw_edge',
-          moveData: { edgeId: availableEdge.id },
+          moveData: { edgeId: bestEdgeId },
         }),
       });
 
@@ -173,10 +185,9 @@ async function executeBotTurn(supabase: any, matchId: string, botFid: number) {
         return; // Game ended
       }
 
-      movesRemaining = drawResult.movesRemaining;
-
-      // Mark edge as claimed locally to avoid re-selecting
-      availableEdge.claimedBy = `player_${botFid}`;
+      if (drawResult.movesRemaining <= 0) {
+        continueDrawing = false;
+      }
 
       // Small delay between moves for better UX
       await new Promise(resolve => setTimeout(resolve, 500));

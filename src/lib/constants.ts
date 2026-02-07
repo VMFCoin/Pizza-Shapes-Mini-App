@@ -7,10 +7,10 @@ export const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD" as cons
 // Contract addresses - reads from env or uses placeholder
 // Update these after deployment or set NEXT_PUBLIC_ env variables
 export const CONTRACTS = {
-  stats: process.env.NEXT_PUBLIC_STATS_CONTRACT || "0x0000000000000000000000000000000000000000",
-  settlement: process.env.NEXT_PUBLIC_SETTLEMENT_CONTRACT || "0x0000000000000000000000000000000000000000",
-  freeRoll: process.env.NEXT_PUBLIC_FREE_ROLL_CONTRACT || "0x0000000000000000000000000000000000000000",
-  weeklyVault: process.env.NEXT_PUBLIC_WEEKLY_VAULT_CONTRACT || "0x0000000000000000000000000000000000000000",
+  stats: (process.env.NEXT_PUBLIC_STATS_CONTRACT || "0x0000000000000000000000000000000000000000").trim(),
+  settlement: (process.env.NEXT_PUBLIC_SETTLEMENT_CONTRACT || "0x0000000000000000000000000000000000000000").trim(),
+  freeRoll: (process.env.NEXT_PUBLIC_FREE_ROLL_CONTRACT || "0x0000000000000000000000000000000000000000").trim(),
+  weeklyVault: (process.env.NEXT_PUBLIC_WEEKLY_VAULT_CONTRACT || "0x0000000000000000000000000000000000000000").trim(),
 } as const;
 
 // 9 Veteran charity wallets (3% of entry fees split 9 ways)
@@ -60,3 +60,7 @@ export const GAME_CONFIG = {
   gridSizes: [4, 6, 8] as const,
   defaultGridSize: 4,
 } as const;
+
+// Bot player configuration
+export const BOT_FID = 999999999;
+export const BOT_DISPLAY_NAME = 'Pizza Bot';

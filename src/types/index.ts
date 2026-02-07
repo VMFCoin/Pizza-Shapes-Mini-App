@@ -36,6 +36,8 @@ export interface Player {
   pfpUrl: string;
   address: string;
   color: string;
+  isBot?: boolean;
+  isConnected?: boolean;
 }
 
 // Player statistics

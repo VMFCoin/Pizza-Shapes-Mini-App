@@ -547,6 +547,38 @@ export function useRealtimeGame(
     };
   }, [matchId, currentPlayerFid]);
 
+  // Auto-trigger bot turns when current player is a bot
+  const botTurnTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (!gameState || gameState.gameOver || !matchId) {
+      botTurnTriggeredRef.current = false;
+      return;
+    }
+
+    const currentP = gameState.players[gameState.currentPlayerIndex];
+    if (!currentP?.isBot) {
+      botTurnTriggeredRef.current = false;
+      return;
+    }
+
+    // Avoid double-triggering for the same turn
+    if (botTurnTriggeredRef.current) return;
+    botTurnTriggeredRef.current = true;
+
+    const timer = setTimeout(async () => {
+      try {
+        await supabase.functions.invoke('trigger-bot-turn', {
+          body: { matchId },
+        });
+      } catch (err) {
+        console.error('Failed to trigger bot turn:', err);
+        botTurnTriggeredRef.current = false;
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId]);
+
   return {
     gameState: mergedGameState,
     gamePhase,

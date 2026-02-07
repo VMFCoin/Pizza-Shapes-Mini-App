@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { PlayerStats, LeaderboardEntry, Player } from '@/types';
+import { BOT_FID } from '@/lib/constants';
 
 interface UseLeaderboardReturn {
   weekly: LeaderboardEntry[];
@@ -65,13 +66,15 @@ export function useLeaderboard(): UseLeaderboardReturn {
 
     try {
       // In production, fetch from API/blockchain
+      // IMPORTANT: Exclude bot player (FID 999999999) from leaderboard queries:
+      //   .neq('player_fid', BOT_FID)
       // const response = await fetch('/api/leaderboard');
       // const data = await response.json();
 
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Generate mock data
+      // Generate mock data (bot excluded by design — mock data doesn't include BOT_FID)
       setWeekly(createMockLeaderboard(20, true));
       setLifetime(createMockLeaderboard(20, false));
     } catch (err) {

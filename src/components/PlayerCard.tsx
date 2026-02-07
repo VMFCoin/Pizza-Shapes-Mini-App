@@ -61,18 +61,27 @@ export function PlayerCard({
             boxShadow: isActive ? `0 0 10px ${player.color}50` : 'none',
           }}
         >
-          <img
-            src={player.pfpUrl}
-            alt={player.displayName}
-            className="w-full h-full object-cover"
-          />
+          {player.isBot ? (
+            <div className="w-full h-full flex items-center justify-center bg-stone-700 text-lg">
+              {"🤖"}
+            </div>
+          ) : (
+            <img
+              src={player.pfpUrl}
+              alt={player.displayName}
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
 
         {/* Player info */}
         <div className="flex-1 min-w-0">
           <p className="font-bold text-game-light truncate text-sm">
             {player.displayName}
-            {isCurrentUser && (
+            {player.isBot && (
+              <span className="ml-1 text-xs text-blue-400">(Bot)</span>
+            )}
+            {isCurrentUser && !player.isBot && (
               <span className="ml-1 text-xs text-game-secondary">(You)</span>
             )}
           </p>
@@ -143,14 +152,21 @@ export function PlayerCardCompact({
         className="w-6 h-6 rounded-full overflow-hidden ring-1"
         style={{ borderColor: player.color }}
       >
-        <img
-          src={player.pfpUrl}
-          alt={player.displayName}
-          className="w-full h-full object-cover"
-        />
+        {player.isBot ? (
+          <div className="w-full h-full flex items-center justify-center bg-stone-700 text-xs">
+            {"🤖"}
+          </div>
+        ) : (
+          <img
+            src={player.pfpUrl}
+            alt={player.displayName}
+            className="w-full h-full object-cover"
+          />
+        )}
       </div>
       <span className="text-xs font-bold text-game-light truncate max-w-[60px]">
         {player.displayName}
+        {player.isBot && <span className="text-blue-400 ml-0.5">(Bot)</span>}
       </span>
       <span
         className="text-sm font-bold ml-auto"

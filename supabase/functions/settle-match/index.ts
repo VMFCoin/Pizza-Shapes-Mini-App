@@ -10,6 +10,7 @@ const PIZZA_TOKEN = '0xa821f2ee19f4f62e404c934d43eb6e5763fbdb07';
 const SETTLEMENT_CONTRACT = Deno.env.get('SETTLEMENT_CONTRACT_ADDRESS') || '';
 const OPERATOR_PRIVATE_KEY = Deno.env.get('OPERATOR_PRIVATE_KEY') || '';
 const BASE_RPC_URL = Deno.env.get('BASE_RPC_URL') || 'https://mainnet.base.org';
+const BOT_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 // Prize distribution (basis points)
 const PRIZE_DISTRIBUTION = {
@@ -20,11 +21,13 @@ const PRIZE_DISTRIBUTION = {
   charity: 300,      // 3%
 };
 
-// Settlement ABI (minimal for settleMatch)
+// Settlement ABI (minimal for settleMatch + settleBotMatch)
 const SETTLEMENT_ABI = [
   'function settleMatch(bytes32 matchId, address winner, address[] players, uint256[] slices) external',
+  'function settleBotMatch(bytes32 matchId, address[] players, uint256[] slices) external',
   'function getMatch(bytes32 matchId) view returns (tuple(bytes32 matchId, address[] players, uint256 entryAmount, uint256 totalPool, bool settled, uint256 createdAt, uint8 tier))',
   'event MatchSettled(bytes32 indexed matchId, address indexed winner, uint256 winnerPrize, uint256 totalPool)',
+  'event BotMatchSettled(bytes32 indexed matchId, uint256 freeRollAmount, uint256 burnedToPizza, uint256 totalPool)',
 ];
 
 // CORS headers
@@ -133,16 +136,32 @@ serve(async (req: Request) => {
       console.log('Match not found on-chain, proceeding with settlement');
     }
 
-    // Call settleMatch on contract
-    const tx = await settlement.settleMatch(
-      matchIdBytes,
-      winner,
-      players,
-      slicesArray,
-      {
-        gasLimit: 500000, // Estimate, may need adjustment
-      }
-    );
+    // Determine if bot won — route to bot-aware settlement path
+    const isBotWinner = winner.toLowerCase() === BOT_ADDRESS.toLowerCase();
+
+    let tx;
+    if (isBotWinner) {
+      // Bot won: 77% winner portion split 50/50 between free roll vault and PIZZA burn
+      tx = await settlement.settleBotMatch(
+        matchIdBytes,
+        players,
+        slicesArray,
+        {
+          gasLimit: 600000,
+        }
+      );
+    } else {
+      // Human won: standard settlement
+      tx = await settlement.settleMatch(
+        matchIdBytes,
+        winner,
+        players,
+        slicesArray,
+        {
+          gasLimit: 500000,
+        }
+      );
+    }
 
     // Wait for confirmation
     const receipt = await tx.wait();
@@ -192,8 +211,12 @@ serve(async (req: Request) => {
       })
       .eq('id', matchId);
 
-    // Update player stats in database
+    // Update player stats in database (skip bot players — they don't appear on leaderboard)
     for (const player of players) {
+      if (player.toLowerCase() === BOT_ADDRESS.toLowerCase()) {
+        continue; // Bot is excluded from stats and leaderboard
+      }
+
       const isWinner = player.toLowerCase() === winner.toLowerCase();
       const slices = scores[player] || 0;
 

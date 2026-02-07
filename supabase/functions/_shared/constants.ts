@@ -19,3 +19,7 @@ export const ENTRY_TIERS = [
 export const CELL_SIZE = 60;
 export const PADDING = 40;
 export const DISCONNECT_TIMEOUT_MS = 30000; // 30 seconds
+
+// Bot player configuration
+export const BOT_FID = 999999999;
+export const BOT_DISPLAY_NAME = 'Pizza Bot';
