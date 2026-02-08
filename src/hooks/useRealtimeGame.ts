@@ -65,6 +65,7 @@ export function useRealtimeGame(
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const botTurnTriggeredRef = useRef<string | null>(null);
   // Ref to always read latest game state in async callbacks (avoids stale closures)
   const gameStateRef = useRef<GameState | null>(null);
   gameStateRef.current = gameState;
@@ -482,7 +483,22 @@ export function useRealtimeGame(
       const captured = data.capturedSlices || [];
       const extraTurn = captured.length > 0;
 
+      // Optimistically update movesRemaining from server response and add captures
+      // so the score counter updates immediately (instead of waiting for realtime).
       if (captured.length > 0) {
+        const playerId = `player_${currentPlayerFid}`;
+        setGameState(prev => {
+          if (!prev) return prev;
+          const newCaptured = [
+            ...prev.capturedSlices,
+            ...captured.map((s: PizzaSlice) => ({ ...s, capturedBy: playerId })),
+          ];
+          return {
+            ...prev,
+            capturedSlices: newCaptured,
+            movesRemaining: data.movesRemaining ?? prev.movesRemaining,
+          };
+        });
         setGamePhase('capturing');
         // Clear any previous capture timer to prevent stale closures
         if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
@@ -508,6 +524,7 @@ export function useRealtimeGame(
   // Uses gameStateRef to avoid stale closure issues.
   // Optimistically advances currentPlayerIndex and resets dice/moves so the UI
   // immediately shows "Waiting for <opponent>" instead of relying on realtime.
+  // After the server confirms, triggers the bot turn directly if the next player is a bot.
   const endTurn = useCallback(async (): Promise<void> => {
     const currentState = gameStateRef.current;
     if (!matchId || !currentPlayerFid || !currentState || currentState.gameOver) return;
@@ -518,6 +535,7 @@ export function useRealtimeGame(
 
     // Optimistically advance turn locally so the UI updates immediately
     const nextPlayerIndex = (currentState.currentPlayerIndex + 1) % currentState.players.length;
+    const nextPlayer = currentState.players[nextPlayerIndex];
     setGameState(prev => {
       if (!prev) return prev;
       return {
@@ -547,6 +565,29 @@ export function useRealtimeGame(
       // Check if the server detected game-over during end_turn
       if (data?.gameOver) {
         setGamePhase('gameOver');
+        return;
+      }
+
+      // If the next player is a bot, trigger bot turn directly now that
+      // the server has confirmed the turn advance. This avoids the race
+      // condition where the useEffect bot trigger fires before the server
+      // has updated current_player_index in the DB.
+      if (nextPlayer?.isBot) {
+        // Pre-set the ref so the useEffect bot trigger doesn't also fire
+        const turnKey = `${nextPlayerIndex}-${currentState.turnNumber + 1}`;
+        botTurnTriggeredRef.current = turnKey;
+
+        setTimeout(async () => {
+          try {
+            await supabase.functions.invoke('trigger-bot-turn', {
+              body: { matchId },
+            });
+          } catch (err) {
+            console.error('Failed to trigger bot turn after endTurn:', err);
+            // Reset ref so useEffect can retry
+            botTurnTriggeredRef.current = null;
+          }
+        }, 500);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to end turn');
@@ -724,7 +765,8 @@ export function useRealtimeGame(
   // Auto-trigger bot turns when current player is a bot.
   // Only the client at player index 0 triggers to prevent duplicate calls
   // from multiple human clients all firing simultaneously.
-  const botTurnTriggeredRef = useRef<string | null>(null);
+  // Note: endTurn also directly triggers bot turns after server confirmation,
+  // and pre-sets botTurnTriggeredRef to prevent this effect from double-triggering.
   useEffect(() => {
     if (!gameState || gameState.gameOver || !matchId) {
       botTurnTriggeredRef.current = null;
