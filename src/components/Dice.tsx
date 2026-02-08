@@ -81,7 +81,7 @@ export function Dice({ value, isRolling, onRoll, disabled = false }: DiceProps) 
   useEffect(() => {
     if (isRolling) {
       setRollPhase('bouncing');
-      
+
       // Fast random face changes during roll
       let changeSpeed = 50;
       const changeFace = () => {
@@ -89,7 +89,7 @@ export function Dice({ value, isRolling, onRoll, disabled = false }: DiceProps) 
         changeSpeed = Math.min(changeSpeed + 10, 200); // Gradually slow down
         rollIntervalRef.current = setTimeout(changeFace, changeSpeed);
       };
-      
+
       rollIntervalRef.current = setTimeout(changeFace, changeSpeed);
 
       // Transition to settling phase
@@ -108,10 +108,14 @@ export function Dice({ value, isRolling, onRoll, disabled = false }: DiceProps) 
         if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
         clearTimeout(landTimeout);
       };
-    } else if (value !== null) {
-      setDisplayValue(value);
-      // Brief landing animation then back to idle
-      setTimeout(() => setRollPhase('idle'), 300);
+    } else {
+      // Rolling stopped — show the final value if available and transition to idle
+      if (value !== null) {
+        setDisplayValue(value);
+      }
+      // Always transition to idle so the dice doesn't get stuck in landed/settling
+      const idleTimer = setTimeout(() => setRollPhase('idle'), 300);
+      return () => clearTimeout(idleTimer);
     }
   }, [isRolling, value]);
 

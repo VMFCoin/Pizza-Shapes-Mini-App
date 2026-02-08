@@ -87,10 +87,21 @@ function GameContent() {
 
     setIsRolling(true);
     setHasRolled(true);
-    setTimeout(async () => {
-      await rollDice();
-      setIsRolling(false);
-    }, 1500);
+
+    // Start server call immediately (runs in parallel with animation)
+    const rollPromise = rollDice();
+
+    // Wait for the animation to finish (1500ms)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Wait for server result too (likely already resolved)
+    await rollPromise;
+
+    // Stop the rolling animation — dice shows final value briefly
+    setIsRolling(false);
+
+    // Give the user 800ms to see the result before phase transitions
+    // (the realtime update or rollDice will set gamePhase to 'drawing')
   }, [gamePhase, isMyTurn, isRolling, hasRolled, rollDice]);
 
   const handleEdgeClick = useCallback(async (edgeId: string) => {

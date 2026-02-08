@@ -194,7 +194,7 @@ export function useRealtimeGame(
 
     setGameState(prev => {
       if (!prev) return prev;
-      return {
+      const updated = {
         ...prev,
         edges: newState.edges as Edge[],
         possibleSlices: newState.possible_slices as PizzaSlice[],
@@ -202,6 +202,18 @@ export function useRealtimeGame(
         diceRoll: newState.dice_roll,
         movesRemaining: newState.moves_remaining,
       };
+
+      // Update phase based on moves remaining (rolling vs drawing).
+      // Game-over and waiting phases are handled by handleMatchUpdate.
+      if (!updated.gameOver) {
+        if (newState.moves_remaining > 0) {
+          setGamePhase('drawing');
+        } else if (newState.dice_roll === null) {
+          setGamePhase('rolling');
+        }
+      }
+
+      return updated;
     });
 
     // Clear optimistic state as server state is now authoritative
@@ -357,11 +369,14 @@ export function useRealtimeGame(
         throw new Error(invokeError.message);
       }
 
-      // Update local phase based on result
-      if (data.turnSkipped) {
-        setGamePhase('rolling');
-      } else {
-        setGamePhase('drawing');
+      // Optimistically update diceRoll and movesRemaining so the UI shows the result
+      // before the realtime subscription delivers it. Phase will update when
+      // handleGameStateUpdate or handleMatchUpdate fires from the DB change.
+      if (!data.turnSkipped) {
+        setGameState(prev => {
+          if (!prev) return prev;
+          return { ...prev, diceRoll: data.diceRoll, movesRemaining: data.movesRemaining };
+        });
       }
 
       return data.diceRoll;
