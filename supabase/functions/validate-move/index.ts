@@ -159,11 +159,11 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
       })
       .eq('id', match.id);
 
-    // Update game state
+    // Update game state — reset dice_roll to null so the next player can roll
     await supabase
       .from('game_states')
       .update({
-        dice_roll: roll,
+        dice_roll: null,
         moves_remaining: 0,
         updated_at: new Date().toISOString(),
       })
