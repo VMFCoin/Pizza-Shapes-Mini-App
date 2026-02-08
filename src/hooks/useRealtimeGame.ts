@@ -695,7 +695,9 @@ export function useRealtimeGame(
     };
   }, [matchId, currentPlayerFid]);
 
-  // 60-second turn timer — resets on each new turn, auto-ends when expired
+  // 60-second turn timer — resets on each new turn, auto-ends when expired.
+  // Uses `isMyTurn` (derived from gameState + currentPlayerFid) so it starts
+  // correctly even if the Farcaster SDK loads after the game state.
   useEffect(() => {
     // Clear previous timer
     if (turnTimerRef.current) {
@@ -703,20 +705,20 @@ export function useRealtimeGame(
       turnTimerRef.current = null;
     }
 
-    if (!gameState || gameState.gameOver || !matchId) {
+    if (!gameState || gameState.gameOver || !matchId || !currentPlayerFid) {
       setTurnTimeRemaining(null);
       return;
     }
 
     // Only run the countdown when it's the current user's turn
-    const currentP = gameState.players[gameState.currentPlayerIndex];
-    if (currentP?.fid !== currentPlayerFid) {
+    if (!isMyTurn) {
       setTurnTimeRemaining(null);
       return;
     }
 
-    // Don't tick timer for bots
-    if (currentP.isBot) {
+    // Don't tick timer for bots (shouldn't be isMyTurn, but guard just in case)
+    const currentP = gameState.players[gameState.currentPlayerIndex];
+    if (currentP?.isBot) {
       setTurnTimeRemaining(null);
       return;
     }
@@ -732,7 +734,6 @@ export function useRealtimeGame(
             clearInterval(turnTimerRef.current);
             turnTimerRef.current = null;
           }
-          // Use endTurn via ref to avoid stale closure
           endTurn();
           return 0;
         }
@@ -746,7 +747,7 @@ export function useRealtimeGame(
         turnTimerRef.current = null;
       }
     };
-  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, currentPlayerFid, endTurn]);
+  }, [isMyTurn, gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, currentPlayerFid, endTurn]);
 
   // Auto-trigger bot turns when current player is a bot.
   // Only the client at player index 0 triggers to prevent duplicate calls

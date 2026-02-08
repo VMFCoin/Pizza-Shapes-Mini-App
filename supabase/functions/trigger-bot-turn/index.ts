@@ -64,11 +64,42 @@ serve(async (req) => {
     );
     const currentPlayer = sortedPlayers[match.current_player_index];
 
+    console.log(`[trigger-bot-turn] matchId=${matchId}, current_player_index=${match.current_player_index}, currentPlayer_fid=${currentPlayer?.player_fid}, is_bot=${currentPlayer?.is_bot}, players=${JSON.stringify(sortedPlayers.map((p: any) => ({ fid: p.player_fid, idx: p.player_index, bot: p.is_bot })))}`);
+
     if (!currentPlayer || !currentPlayer.is_bot) {
-      return new Response(
-        JSON.stringify({ error: 'Current player is not a bot' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Retry once after a short delay — DB write from validate-move may not have propagated yet
+      console.log('[trigger-bot-turn] Current player is not a bot, retrying in 500ms...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const { data: retryMatch } = await supabase
+        .from('matches')
+        .select(`*, match_players (player_fid, player_index, is_bot)`)
+        .eq('id', matchId)
+        .single();
+
+      if (retryMatch) {
+        const retrySorted = retryMatch.match_players.sort(
+          (a: any, b: any) => a.player_index - b.player_index
+        );
+        const retryPlayer = retrySorted[retryMatch.current_player_index];
+        console.log(`[trigger-bot-turn] Retry: current_player_index=${retryMatch.current_player_index}, is_bot=${retryPlayer?.is_bot}`);
+
+        if (retryPlayer && retryPlayer.is_bot) {
+          // Proceed with the retried data — reassign and continue below
+          Object.assign(match, retryMatch);
+          Object.assign(currentPlayer, retryPlayer);
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'Current player is not a bot (after retry)' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'Current player is not a bot' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const botFid = currentPlayer.player_fid;
@@ -76,10 +107,13 @@ serve(async (req) => {
     let movesPlayed = 0;
 
     // Step 1: Roll dice
+    console.log(`[trigger-bot-turn] Rolling dice for bot FID=${botFid}`);
     const rollResponse = await callValidateMove(matchId, botFid, 'roll_dice', {});
+    console.log(`[trigger-bot-turn] Roll result:`, JSON.stringify(rollResponse));
 
     if (rollResponse.error) {
       // Might be "Not your turn" if turn already changed — not a real error
+      console.error(`[trigger-bot-turn] Roll error: ${rollResponse.error}`);
       return new Response(
         JSON.stringify({ success: false, error: rollResponse.error, movesPlayed: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

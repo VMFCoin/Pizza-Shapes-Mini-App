@@ -198,10 +198,12 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
       })
       .eq('match_id', match.id);
 
-    // If the next player is a bot, trigger bot turn from server
+    // If the next player is a bot, trigger bot turn from server.
+    // Small delay ensures DB writes have propagated.
     if (nextPlayer?.is_bot) {
       try {
-        await fetch(
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const botResp = await fetch(
           `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
           {
             method: 'POST',
@@ -212,6 +214,8 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
             body: JSON.stringify({ matchId: match.id }),
           }
         );
+        const botResult = await botResp.json();
+        console.log('Bot turn trigger result (turn_skip):', JSON.stringify(botResult));
       } catch (err: any) {
         console.error('Failed to trigger bot turn after turn skip:', err);
       }
@@ -397,9 +401,12 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
   // This is more reliable than triggering from the client which has timing issues.
   // We must await this because Deno edge functions stop execution after sending
   // the response — fire-and-forget fetch won't complete.
+  // Small delay ensures the DB writes above have fully propagated before
+  // trigger-bot-turn reads the updated current_player_index.
   if (nextPlayer?.is_bot) {
     try {
-      await fetch(
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const botResp = await fetch(
         `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
         {
           method: 'POST',
@@ -410,6 +417,8 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
           body: JSON.stringify({ matchId: match.id }),
         }
       );
+      const botResult = await botResp.json();
+      console.log('Bot turn trigger result (end_turn):', JSON.stringify(botResult));
     } catch (err: any) {
       console.error('Failed to trigger bot turn from end_turn:', err);
     }
