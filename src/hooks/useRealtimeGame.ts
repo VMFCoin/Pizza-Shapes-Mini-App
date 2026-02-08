@@ -36,11 +36,13 @@ interface UseRealtimeGameReturn {
   canDrawEdge: (edgeId: EdgeID) => boolean;
   isGameOver: boolean;
   winner: Player | null;
+  turnTimeRemaining: number | null;
 }
 
 const CELL_SIZE = 60;
 const PADDING = 40;
 const RECONNECT_TIMEOUT = 30000; // 30 seconds
+const TURN_TIME_LIMIT = 60; // 60 seconds per turn
 
 export function useRealtimeGame(
   matchId: MatchID | null,
@@ -54,6 +56,10 @@ export function useRealtimeGame(
 
   // Optimistic state for instant UI feedback
   const [optimisticEdges, setOptimisticEdges] = useState<Map<EdgeID, PlayerID>>(new Map());
+
+  // Turn timer: counts down from TURN_TIME_LIMIT each turn
+  const [turnTimeRemaining, setTurnTimeRemaining] = useState<number | null>(null);
+  const turnTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const gameChannelRef = useRef<RealtimeChannel | null>(null);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
@@ -499,7 +505,9 @@ export function useRealtimeGame(
   }, [matchId, currentPlayerFid, optimisticEdges]);
 
   // End turn
-  // Uses gameStateRef to avoid stale closure issues
+  // Uses gameStateRef to avoid stale closure issues.
+  // Optimistically advances currentPlayerIndex and resets dice/moves so the UI
+  // immediately shows "Waiting for <opponent>" instead of relying on realtime.
   const endTurn = useCallback(async (): Promise<void> => {
     const currentState = gameStateRef.current;
     if (!matchId || !currentPlayerFid || !currentState || currentState.gameOver) return;
@@ -507,6 +515,20 @@ export function useRealtimeGame(
     // Check it's our turn using ref
     const currentP = currentState.players[currentState.currentPlayerIndex];
     if (currentP?.fid !== currentPlayerFid) return;
+
+    // Optimistically advance turn locally so the UI updates immediately
+    const nextPlayerIndex = (currentState.currentPlayerIndex + 1) % currentState.players.length;
+    setGameState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        currentPlayerIndex: nextPlayerIndex,
+        turnNumber: prev.turnNumber + 1,
+        diceRoll: null,
+        movesRemaining: 0,
+      };
+    });
+    setGamePhase('rolling');
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
@@ -525,8 +547,6 @@ export function useRealtimeGame(
       // Check if the server detected game-over during end_turn
       if (data?.gameOver) {
         setGamePhase('gameOver');
-      } else {
-        setGamePhase('rolling');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to end turn');
@@ -605,6 +625,9 @@ export function useRealtimeGame(
       if (captureTimerRef.current) {
         clearTimeout(captureTimerRef.current);
       }
+      if (turnTimerRef.current) {
+        clearInterval(turnTimerRef.current);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId, currentPlayerFid]);
@@ -644,6 +667,59 @@ export function useRealtimeGame(
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [matchId, currentPlayerFid]);
+
+  // 60-second turn timer — resets on each new turn, auto-ends when expired
+  useEffect(() => {
+    // Clear previous timer
+    if (turnTimerRef.current) {
+      clearInterval(turnTimerRef.current);
+      turnTimerRef.current = null;
+    }
+
+    if (!gameState || gameState.gameOver || !matchId) {
+      setTurnTimeRemaining(null);
+      return;
+    }
+
+    // Only run the countdown when it's the current user's turn
+    const currentP = gameState.players[gameState.currentPlayerIndex];
+    if (currentP?.fid !== currentPlayerFid) {
+      setTurnTimeRemaining(null);
+      return;
+    }
+
+    // Don't tick timer for bots
+    if (currentP.isBot) {
+      setTurnTimeRemaining(null);
+      return;
+    }
+
+    // Start countdown
+    setTurnTimeRemaining(TURN_TIME_LIMIT);
+
+    turnTimerRef.current = setInterval(() => {
+      setTurnTimeRemaining(prev => {
+        if (prev === null || prev <= 1) {
+          // Time's up — auto-end turn
+          if (turnTimerRef.current) {
+            clearInterval(turnTimerRef.current);
+            turnTimerRef.current = null;
+          }
+          // Use endTurn via ref to avoid stale closure
+          endTurn();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (turnTimerRef.current) {
+        clearInterval(turnTimerRef.current);
+        turnTimerRef.current = null;
+      }
+    };
+  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, currentPlayerFid, endTurn]);
 
   // Auto-trigger bot turns when current player is a bot.
   // Only the client at player index 0 triggers to prevent duplicate calls
@@ -701,5 +777,6 @@ export function useRealtimeGame(
     canDrawEdge,
     isGameOver,
     winner,
+    turnTimeRemaining,
   };
 }

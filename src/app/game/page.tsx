@@ -44,6 +44,7 @@ function GameContent() {
     canDrawEdge,
     isGameOver,
     winner,
+    turnTimeRemaining,
   } = useRealtimeGame(matchId, context?.fid || null);
 
   const [isRolling, setIsRolling] = useState(false);
@@ -227,15 +228,36 @@ function GameContent() {
       {/* Header */}
       <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-3 pt-3 safe-area-top bg-gradient-to-b from-game-dark via-game-dark/80 to-transparent">
         <div className={`flex items-center justify-between ${connectionStatus !== 'connected' ? 'mt-8' : ''}`}>
-          <div 
-            className="px-3 py-1.5 rounded-lg"
-            style={{
-              background: 'linear-gradient(180deg, #3D3835 0%, #292524 100%)',
-              boxShadow: '0 2px 0 0 #1C1917, inset 0 1px 0 rgba(255,255,255,0.05)',
-            }}
-          >
-            <span className="text-stone-400 text-xs">Turn </span>
-            <span className="font-bold text-game-light">{gameState.turnNumber}</span>
+          <div className="flex items-center gap-2">
+            <div
+              className="px-3 py-1.5 rounded-lg"
+              style={{
+                background: 'linear-gradient(180deg, #3D3835 0%, #292524 100%)',
+                boxShadow: '0 2px 0 0 #1C1917, inset 0 1px 0 rgba(255,255,255,0.05)',
+              }}
+            >
+              <span className="text-stone-400 text-xs">Turn </span>
+              <span className="font-bold text-game-light">{gameState.turnNumber}</span>
+            </div>
+            {turnTimeRemaining !== null && (
+              <div
+                className="px-3 py-1.5 rounded-lg"
+                style={{
+                  background: turnTimeRemaining <= 10
+                    ? 'linear-gradient(180deg, #FF4444 0%, #CC2222 100%)'
+                    : turnTimeRemaining <= 20
+                    ? 'linear-gradient(180deg, #FF8C5A 0%, #FF6B35 100%)'
+                    : 'linear-gradient(180deg, #3D3835 0%, #292524 100%)',
+                  boxShadow: turnTimeRemaining <= 10
+                    ? '0 2px 0 0 #991111'
+                    : '0 2px 0 0 #1C1917, inset 0 1px 0 rgba(255,255,255,0.05)',
+                }}
+              >
+                <span className={`font-bold text-sm ${turnTimeRemaining <= 10 ? 'text-white' : 'text-game-light'}`}>
+                  {turnTimeRemaining}s
+                </span>
+              </div>
+            )}
           </div>
           <WalletDisplayCompact balance={balance} onViewToken={() => viewToken()} />
         </div>
