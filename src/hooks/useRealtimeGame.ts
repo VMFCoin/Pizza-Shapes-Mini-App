@@ -202,6 +202,7 @@ export function useRealtimeGame(
   // Handle game state updates from realtime subscription
   const handleGameStateUpdate = useCallback((payload: any) => {
     const newState = payload.new as GameStateRow;
+    console.log(`[RT game_states] dice_roll=${newState.dice_roll}, moves_remaining=${newState.moves_remaining}, captured=${(newState.captured_slices as any[])?.length || 0}`);
 
     setGameState(prev => {
       if (!prev) return prev;
@@ -236,9 +237,12 @@ export function useRealtimeGame(
   // Handle match updates (turn changes, game end)
   const handleMatchUpdate = useCallback((payload: any) => {
     const match = payload.new as MatchRow;
+    console.log(`[RT matches] current_player_index=${match.current_player_index}, turn_number=${match.turn_number}, status=${match.status}`);
 
     setGameState(prev => {
       if (!prev) return prev;
+      const playerAtIndex = prev.players[match.current_player_index];
+      console.log(`[RT matches] Next player: ${playerAtIndex?.displayName} (fid=${playerAtIndex?.fid}, isBot=${playerAtIndex?.isBot})`);
       const updated = {
         ...prev,
         currentPlayerIndex: match.current_player_index,
@@ -246,7 +250,9 @@ export function useRealtimeGame(
         gameOver: match.status === 'completed',
         winner: match.winner_fid ? `player_${match.winner_fid}` : null,
       };
-      setGamePhase(determinePhase(updated, match.status));
+      const newPhase = determinePhase(updated, match.status);
+      console.log(`[RT matches] Phase: ${newPhase}`);
+      setGamePhase(newPhase);
       return updated;
     });
   }, [determinePhase]);
@@ -362,21 +368,25 @@ export function useRealtimeGame(
   const rollDice = useCallback(async (): Promise<number> => {
     const currentState = gameStateRef.current;
     if (!matchId || !currentState || !currentPlayerFid || currentState.gameOver) {
+      console.log(`[rollDice] BAIL: matchId=${matchId}, fid=${currentPlayerFid}, gameOver=${currentState?.gameOver}`);
       return 0;
     }
 
     // Check it's our turn using ref
     const currentP = currentState.players[currentState.currentPlayerIndex];
     if (currentP?.fid !== currentPlayerFid) {
+      console.log(`[rollDice] BAIL: not my turn. currentP.fid=${currentP?.fid}, myFid=${currentPlayerFid}`);
       return 0;
     }
 
     // Prevent rolling if already rolled this turn (moves allocated or dice already shown)
     if (currentState.movesRemaining > 0 || currentState.diceRoll !== null) {
+      console.log(`[rollDice] Already rolled: moves=${currentState.movesRemaining}, dice=${currentState.diceRoll}`);
       return currentState.diceRoll || 0;
     }
 
     try {
+      console.log(`[rollDice] Calling validate-move roll_dice...`);
       const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
         body: {
           matchId,
@@ -385,6 +395,8 @@ export function useRealtimeGame(
           moveData: {},
         },
       });
+
+      console.log(`[rollDice] Response:`, JSON.stringify(data), `error:`, invokeError);
 
       if (invokeError) {
         throw new Error(invokeError.message);
@@ -527,15 +539,23 @@ export function useRealtimeGame(
   // After the server confirms, triggers the bot turn directly if the next player is a bot.
   const endTurn = useCallback(async (): Promise<void> => {
     const currentState = gameStateRef.current;
-    if (!matchId || !currentPlayerFid || !currentState || currentState.gameOver) return;
+    if (!matchId || !currentPlayerFid || !currentState || currentState.gameOver) {
+      console.log(`[endTurn] BAIL: matchId=${matchId}, fid=${currentPlayerFid}, gameOver=${currentState?.gameOver}`);
+      return;
+    }
 
     // Check it's our turn using ref
     const currentP = currentState.players[currentState.currentPlayerIndex];
-    if (currentP?.fid !== currentPlayerFid) return;
+    if (currentP?.fid !== currentPlayerFid) {
+      console.log(`[endTurn] BAIL: not my turn. currentP.fid=${currentP?.fid}, myFid=${currentPlayerFid}`);
+      return;
+    }
 
     // Optimistically advance turn locally so the UI updates immediately
     const nextPlayerIndex = (currentState.currentPlayerIndex + 1) % currentState.players.length;
     const nextPlayer = currentState.players[nextPlayerIndex];
+    console.log(`[endTurn] Advancing to player ${nextPlayerIndex} (${nextPlayer?.displayName}, isBot=${nextPlayer?.isBot}), turn ${currentState.turnNumber + 1}`);
+
     setGameState(prev => {
       if (!prev) return prev;
       return {
@@ -549,6 +569,7 @@ export function useRealtimeGame(
     setGamePhase('rolling');
 
     try {
+      console.log(`[endTurn] Calling validate-move end_turn...`);
       const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
         body: {
           matchId,
@@ -558,30 +579,35 @@ export function useRealtimeGame(
         },
       });
 
+      console.log(`[endTurn] Response:`, JSON.stringify(data), `error:`, invokeError);
+
       if (invokeError) {
         throw new Error(invokeError.message);
       }
 
       // Check if the server detected game-over during end_turn
       if (data?.gameOver) {
+        console.log(`[endTurn] Game over detected`);
         setGamePhase('gameOver');
         return;
       }
 
-      // The server-side end_turn fires trigger-bot-turn (non-blocking).
+      // The server-side end_turn executes bot turn inline.
       // Pre-set the ref so the client-side useEffect fallback doesn't
-      // double-trigger. Clear it after 5s so the client can retry if the
-      // server fire-and-forget didn't complete (Deno runtime killed it).
+      // double-trigger. Clear it after 5s as safety fallback.
       if (nextPlayer?.isBot) {
         const turnKey = `${nextPlayerIndex}-${currentState.turnNumber + 1}`;
+        console.log(`[endTurn] Setting botTurnTriggeredRef=${turnKey}`);
         botTurnTriggeredRef.current = turnKey;
         setTimeout(() => {
           if (botTurnTriggeredRef.current === turnKey) {
+            console.log(`[endTurn] Clearing stale botTurnTriggeredRef=${turnKey}`);
             botTurnTriggeredRef.current = null;
           }
         }, 5000);
       }
     } catch (err: any) {
+      console.error(`[endTurn] ERROR:`, err);
       setError(err.message || 'Failed to end turn');
     }
   }, [matchId, currentPlayerFid]);
@@ -730,6 +756,7 @@ export function useRealtimeGame(
     }
 
     // Start countdown
+    console.log(`[timer] Starting 60s countdown. isMyTurn=${isMyTurn}, playerIndex=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}`);
     setTurnTimeRemaining(TURN_TIME_LIMIT);
 
     turnTimerRef.current = setInterval(() => {
@@ -755,11 +782,9 @@ export function useRealtimeGame(
     };
   }, [isMyTurn, gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, currentPlayerFid, endTurn]);
 
-  // Auto-trigger bot turns when current player is a bot.
-  // Only the client at player index 0 triggers to prevent duplicate calls
-  // from multiple human clients all firing simultaneously.
-  // Note: endTurn also directly triggers bot turns after server confirmation,
-  // and pre-sets botTurnTriggeredRef to prevent this effect from double-triggering.
+  // Auto-trigger bot turns when current player is a bot (CLIENT FALLBACK).
+  // The server-side inline bot in validate-move is the primary mechanism.
+  // This is a backup in case the inline bot didn't run.
   useEffect(() => {
     if (!gameState || gameState.gameOver || !matchId) {
       botTurnTriggeredRef.current = null;
@@ -772,24 +797,29 @@ export function useRealtimeGame(
       return;
     }
 
-    // Only the player at index 0 triggers bot turns to avoid N clients
-    // all calling trigger-bot-turn simultaneously
     const myIndex = gameState.players.findIndex(p => p.fid === currentPlayerFid);
-    if (myIndex !== 0) return;
+    if (myIndex !== 0) {
+      console.log(`[botEffect] SKIP: myIndex=${myIndex}, not player 0`);
+      return;
+    }
 
-    // Use a composite key so each unique turn gets its own trigger,
-    // preventing deadlock when consecutive bots play.
     const turnKey = `${gameState.currentPlayerIndex}-${gameState.turnNumber}`;
-    if (botTurnTriggeredRef.current === turnKey) return;
+    if (botTurnTriggeredRef.current === turnKey) {
+      console.log(`[botEffect] SKIP: already triggered for ${turnKey}`);
+      return;
+    }
+    console.log(`[botEffect] Bot is current player (index=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}). Triggering fallback in 1s...`);
     botTurnTriggeredRef.current = turnKey;
 
     const timer = setTimeout(async () => {
+      console.log(`[botEffect] Calling trigger-bot-turn (fallback)...`);
       try {
-        await supabase.functions.invoke('trigger-bot-turn', {
+        const { data, error } = await supabase.functions.invoke('trigger-bot-turn', {
           body: { matchId },
         });
+        console.log(`[botEffect] trigger-bot-turn result:`, JSON.stringify(data), `error:`, error);
       } catch (err) {
-        console.error('Failed to trigger bot turn:', err);
+        console.error('[botEffect] Failed to trigger bot turn:', err);
         botTurnTriggeredRef.current = null;
       }
     }, 1000);
