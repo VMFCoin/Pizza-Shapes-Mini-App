@@ -47,6 +47,7 @@ function GameContent() {
   } = useRealtimeGame(matchId, context?.fid || null);
 
   const [isRolling, setIsRolling] = useState(false);
+  const [hasRolled, setHasRolled] = useState(false);
   const [captureNotification, setCaptureNotification] = useState<{
     playerName: string;
     playerColor: string;
@@ -64,24 +65,33 @@ function GameContent() {
   }, [isGameOver, winner, matchId, router]);
 
   // Auto-end turn when no moves remaining (and in drawing phase)
+  // Use 1500ms delay to allow server realtime updates (e.g. extra turn from capture) to arrive first
   useEffect(() => {
     if (gameState && gamePhase === 'drawing' && gameState.movesRemaining === 0 && !isGameOver && isMyTurn) {
       const timer = setTimeout(() => {
         endTurn();
-      }, 500);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [gameState, gamePhase, isGameOver, isMyTurn, endTurn]);
 
+  // Reset hasRolled when it becomes a new turn for this player
+  useEffect(() => {
+    if (gamePhase === 'rolling' && isMyTurn && gameState?.diceRoll === null) {
+      setHasRolled(false);
+    }
+  }, [gamePhase, isMyTurn, gameState?.diceRoll]);
+
   const handleRoll = useCallback(async () => {
-    if (gamePhase !== 'rolling' || !isMyTurn) return;
+    if (gamePhase !== 'rolling' || !isMyTurn || isRolling || hasRolled) return;
 
     setIsRolling(true);
+    setHasRolled(true);
     setTimeout(async () => {
       await rollDice();
       setIsRolling(false);
     }, 1500);
-  }, [gamePhase, isMyTurn, rollDice]);
+  }, [gamePhase, isMyTurn, isRolling, hasRolled, rollDice]);
 
   const handleEdgeClick = useCallback(async (edgeId: string) => {
     if (!canDrawEdge(edgeId) || !currentPlayer || !isMyTurn) return;
@@ -312,7 +322,7 @@ function GameContent() {
                 value={gameState.diceRoll}
                 isRolling={isRolling}
                 onRoll={handleRoll}
-                disabled={!isMyTurn || connectionStatus !== 'connected'}
+                disabled={!isMyTurn || connectionStatus !== 'connected' || hasRolled}
               />
             </div>
           )}

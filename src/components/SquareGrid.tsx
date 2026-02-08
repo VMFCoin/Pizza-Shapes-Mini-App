@@ -60,8 +60,11 @@ export function SquareGrid({
 
       if (edgeId && canDrawEdge(edgeId)) {
         onEdgeClick(edgeId);
+        setSelectedNode(null);
+      } else {
+        // Edge not drawable — switch selection to the tapped node so user can try a different pair
+        setSelectedNode(nodeId);
       }
-      setSelectedNode(null);
     }
   }, [selectedNode, edges, canDrawEdge, onEdgeClick]);
 
@@ -103,6 +106,18 @@ export function SquareGrid({
     });
   }, [capturedSlices, nodes, getPlayerColor]);
 
+  // Compute which edges connect to the selected node and can be drawn
+  const drawableFromSelected = useMemo(() => {
+    if (!selectedNode) return new Set<string>();
+    const set = new Set<string>();
+    for (const edge of edges) {
+      if ((edge.nodeA === selectedNode || edge.nodeB === selectedNode) && canDrawEdge(edge.id)) {
+        set.add(edge.id);
+      }
+    }
+    return set;
+  }, [selectedNode, edges, canDrawEdge]);
+
   // Render edges
   const renderedEdges = useMemo(() => {
     return edges.map(edge => {
@@ -112,6 +127,7 @@ export function SquareGrid({
       const isClaimed = edge.claimedBy !== null;
       const isHovered = hoveredEdge === edge.id;
       const canDraw = canDrawEdge(edge.id);
+      const isDrawableFromSelected = drawableFromSelected.has(edge.id);
       const color = isClaimed ? getPlayerColor(edge.claimedBy) : currentPlayerColor;
 
       return (
@@ -121,10 +137,10 @@ export function SquareGrid({
           y1={coords.y1}
           x2={coords.x2}
           y2={coords.y2}
-          stroke={isClaimed ? color : isHovered && canDraw ? color : '#444'}
-          strokeWidth={isClaimed ? 4 : isHovered && canDraw ? 3 : 1}
+          stroke={isClaimed ? color : (isHovered && canDraw) || isDrawableFromSelected ? color : '#444'}
+          strokeWidth={isClaimed ? 4 : (isHovered && canDraw) || isDrawableFromSelected ? 3 : 1}
           strokeLinecap="round"
-          opacity={isClaimed ? 1 : isHovered && canDraw ? 0.8 : 0.3}
+          opacity={isClaimed ? 1 : isDrawableFromSelected ? 0.6 : isHovered && canDraw ? 0.8 : 0.3}
           className={canDraw && !isClaimed ? 'cursor-pointer' : ''}
           onClick={() => canDraw && !isClaimed && onEdgeClick(edge.id)}
           onMouseEnter={() => setHoveredEdge(edge.id)}
@@ -135,33 +151,50 @@ export function SquareGrid({
         />
       );
     });
-  }, [edges, nodes, hoveredEdge, canDrawEdge, getPlayerColor, currentPlayerColor, onEdgeClick]);
+  }, [edges, nodes, hoveredEdge, canDrawEdge, drawableFromSelected, getPlayerColor, currentPlayerColor, onEdgeClick]);
+
+  // Compute which nodes are connectable from the selected node
+  const connectableNodes = useMemo(() => {
+    if (!selectedNode) return new Set<string>();
+    const set = new Set<string>();
+    for (const edge of edges) {
+      if (canDrawEdge(edge.id)) {
+        if (edge.nodeA === selectedNode) set.add(edge.nodeB);
+        if (edge.nodeB === selectedNode) set.add(edge.nodeA);
+      }
+    }
+    return set;
+  }, [selectedNode, edges, canDrawEdge]);
 
   // Render nodes (dots)
   const renderedNodes = useMemo(() => {
     return nodes.map(node => {
       const isSelected = selectedNode === node.id;
+      const isConnectable = connectableNodes.has(node.id);
 
       return (
         <motion.circle
           key={node.id}
           cx={node.x}
           cy={node.y}
-          r={isSelected ? 10 : 8}
-          fill={isSelected ? currentPlayerColor : '#fff'}
-          stroke={isSelected ? currentPlayerColor : '#333'}
-          strokeWidth={2}
+          r={isSelected ? 10 : isConnectable ? 9 : 8}
+          fill={isSelected ? currentPlayerColor : isConnectable ? `${currentPlayerColor}80` : '#fff'}
+          stroke={isSelected || isConnectable ? currentPlayerColor : '#333'}
+          strokeWidth={isSelected || isConnectable ? 3 : 2}
           className="cursor-pointer"
           onClick={() => handleNodeClick(node.id)}
           whileHover={{ scale: 1.2 }}
           whileTap={{ scale: 0.9 }}
           animate={isSelected ? {
             boxShadow: `0 0 20px ${currentPlayerColor}`,
+          } : isConnectable ? {
+            scale: [1, 1.1, 1],
           } : {}}
+          transition={isConnectable ? { duration: 1, repeat: Infinity } : undefined}
         />
       );
     });
-  }, [nodes, selectedNode, currentPlayerColor, handleNodeClick]);
+  }, [nodes, selectedNode, connectableNodes, currentPlayerColor, handleNodeClick]);
 
   return (
     <div

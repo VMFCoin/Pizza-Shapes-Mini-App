@@ -338,6 +338,11 @@ export function useRealtimeGame(
       return 0;
     }
 
+    // Prevent rolling if already rolled this turn (moves allocated or dice already shown)
+    if (gameState.movesRemaining > 0 || gameState.diceRoll !== null) {
+      return gameState.diceRoll || 0;
+    }
+
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
         body: {
@@ -382,6 +387,12 @@ export function useRealtimeGame(
     const playerId = `player_${currentPlayerFid}`;
     setOptimisticEdges(prev => new Map(prev).set(edgeId, playerId));
 
+    // Optimistically decrement moves remaining so canDrawEdge stays accurate
+    setGameState(prev => {
+      if (!prev) return prev;
+      return { ...prev, movesRemaining: prev.movesRemaining - 1 };
+    });
+
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
         body: {
@@ -393,11 +404,15 @@ export function useRealtimeGame(
       });
 
       if (invokeError) {
-        // Rollback optimistic update
+        // Rollback optimistic updates
         setOptimisticEdges(prev => {
           const next = new Map(prev);
           next.delete(edgeId);
           return next;
+        });
+        setGameState(prev => {
+          if (!prev) return prev;
+          return { ...prev, movesRemaining: prev.movesRemaining + 1 };
         });
         throw new Error(invokeError.message);
       }

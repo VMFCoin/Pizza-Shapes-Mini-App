@@ -128,6 +128,17 @@ serve(async (req) => {
 });
 
 async function handleRollDice(supabase: any, match: any, gameState: any) {
+  // Prevent rolling if player already rolled this turn
+  if (gameState.moves_remaining > 0 || gameState.dice_roll !== null) {
+    return {
+      diceRoll: gameState.dice_roll,
+      movesRemaining: gameState.moves_remaining,
+      turnSkipped: false,
+      availableMoves: countAvailableMoves(gameState.edges as Edge[]),
+      alreadyRolled: true,
+    };
+  }
+
   const roll = Math.floor(Math.random() * 6) + 1;
   const edges = gameState.edges as Edge[];
   const availableMoves = countAvailableMoves(edges);
