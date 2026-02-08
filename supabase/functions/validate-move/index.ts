@@ -8,6 +8,7 @@ import {
   hasRemainingSlices,
   determineWinner,
 } from '../_shared/gridUtils.ts';
+import { chooseBestEdge } from '../_shared/botStrategy.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -198,23 +199,13 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
       })
       .eq('match_id', match.id);
 
-    // If the next player is a bot, trigger bot turn from server.
-    // Fire-and-forget: don't await, as trigger-bot-turn takes seconds.
+    // If the next player is a bot, execute bot turn inline
     if (nextPlayer?.is_bot) {
-      fetch(
-        `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          },
-          body: JSON.stringify({ matchId: match.id }),
-        }
-      )
-        .then(r => r.json())
-        .then(result => console.log('Bot turn trigger result (turn_skip):', JSON.stringify(result)))
-        .catch(err => console.error('Failed to trigger bot turn after turn skip:', err));
+      try {
+        await executeBotTurn(supabase, match.id, nextPlayer.player_fid, nextPlayerIndex, sortedPlayers);
+      } catch (err: any) {
+        console.error('Inline bot turn error (turn_skip):', err);
+      }
     }
 
     return {
@@ -393,27 +384,18 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
     })
     .eq('match_id', match.id);
 
-  // If the next player is a bot, trigger bot turn from the server.
-  // IMPORTANT: Do NOT await this — trigger-bot-turn takes several seconds
-  // (800ms delay per move, multiple DB calls). Awaiting it would block the
-  // validate-move response and cause a timeout, leaving the client hanging.
-  // Deno Deploy will continue executing the fetch promise after the response
-  // is sent (unlike setTimeout which gets cancelled).
+  // If the next player is a bot, execute the bot's turn inline.
+  // Previous approach (calling trigger-bot-turn via fetch) failed because:
+  // - Awaiting blocked the response and caused timeout
+  // - Fire-and-forget was killed by Deno runtime after response sent
+  // Inline approach: bot plays its entire turn within this single invocation.
   if (nextPlayer?.is_bot) {
-    fetch(
-      `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-        },
-        body: JSON.stringify({ matchId: match.id }),
-      }
-    )
-      .then(r => r.json())
-      .then(result => console.log('Bot turn trigger result (end_turn):', JSON.stringify(result)))
-      .catch(err => console.error('Failed to trigger bot turn from end_turn:', err));
+    try {
+      await executeBotTurn(supabase, match.id, nextPlayer.player_fid, nextPlayerIndex, sortedPlayers);
+    } catch (err: any) {
+      console.error('Inline bot turn error:', err);
+      // Don't fail the human's end_turn — bot error is non-fatal
+    }
   }
 
   return {
@@ -422,4 +404,155 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
     nextPlayerIndex,
     nextPlayerIsBot: nextPlayer?.is_bot ?? false,
   };
+}
+
+/**
+ * Execute a bot's entire turn inline: roll dice, draw edges, end turn.
+ * Runs within the same edge function invocation — no cross-function HTTP calls.
+ */
+async function executeBotTurn(
+  supabase: any,
+  matchId: string,
+  botFid: number,
+  botPlayerIndex: number,
+  sortedPlayers: any[]
+) {
+  const botPlayerId = `player_${botFid}`;
+  console.log(`[bot-inline] Starting bot turn for FID=${botFid}, index=${botPlayerIndex}`);
+
+  // Step 1: Roll dice
+  const roll = Math.floor(Math.random() * 6) + 1;
+
+  // Re-fetch game state for the latest board
+  const { data: gs } = await supabase
+    .from('game_states')
+    .select('*')
+    .eq('match_id', matchId)
+    .single();
+
+  if (!gs) {
+    console.error('[bot-inline] Game state not found');
+    return;
+  }
+
+  let edges = gs.edges as Edge[];
+  let possibleSlices = gs.possible_slices as PizzaSlice[];
+  let capturedSlices = gs.captured_slices as PizzaSlice[];
+  const availableMoves = countAvailableMoves(edges);
+
+  // Check if game should end (no remaining slices)
+  if (!hasRemainingSlices(possibleSlices, edges)) {
+    console.log('[bot-inline] No remaining slices, ending game');
+    const players = sortedPlayers.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
+    const winnerId = determineWinner(players, capturedSlices);
+    const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+    await supabase.from('matches').update({
+      status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString(),
+    }).eq('id', matchId);
+    return;
+  }
+
+  // If roll > available moves, skip turn (advance to next player)
+  if (roll > availableMoves) {
+    console.log(`[bot-inline] Roll ${roll} > ${availableMoves} available, skipping`);
+    const nextIdx = (botPlayerIndex + 1) % sortedPlayers.length;
+    await supabase.from('matches').update({
+      current_player_index: nextIdx,
+      turn_number: (await supabase.from('matches').select('turn_number').eq('id', matchId).single()).data.turn_number + 1,
+    }).eq('id', matchId);
+    await supabase.from('game_states').update({
+      dice_roll: null, moves_remaining: 0, updated_at: new Date().toISOString(),
+    }).eq('match_id', matchId);
+    return;
+  }
+
+  // Normal roll — update game state with dice result
+  let movesRemaining = roll;
+  await supabase.from('game_states').update({
+    dice_roll: roll, moves_remaining: roll, updated_at: new Date().toISOString(),
+  }).eq('match_id', matchId);
+
+  console.log(`[bot-inline] Rolled ${roll}, drawing edges`);
+
+  // Step 2: Draw edges using strategy
+  while (movesRemaining > 0) {
+    // Re-fetch latest game state for each move (captures change the board)
+    const { data: currentGs } = await supabase
+      .from('game_states')
+      .select('*')
+      .eq('match_id', matchId)
+      .single();
+
+    if (!currentGs || currentGs.moves_remaining <= 0) break;
+
+    edges = currentGs.edges as Edge[];
+    possibleSlices = currentGs.possible_slices as PizzaSlice[];
+    capturedSlices = currentGs.captured_slices as PizzaSlice[];
+
+    const bestEdgeId = chooseBestEdge(edges, possibleSlices, botPlayerId);
+    if (!bestEdgeId) break;
+
+    // Claim the edge
+    const updatedEdges = edges.map((e: Edge) =>
+      e.id === bestEdgeId ? { ...e, claimedBy: botPlayerId } : e
+    );
+
+    // Check for captures
+    const newlyCompleted = findNewlyCompletedSlices(bestEdgeId, possibleSlices, updatedEdges);
+    const updatedPossibleSlices = possibleSlices.map((s: PizzaSlice) => {
+      const captured = newlyCompleted.some((nc: PizzaSlice) => nc.id === s.id);
+      return captured ? { ...s, capturedBy: botPlayerId } : s;
+    });
+    const newCapturedSlices = [
+      ...capturedSlices,
+      ...newlyCompleted.map((s: PizzaSlice) => ({ ...s, capturedBy: botPlayerId })),
+    ];
+
+    const extraTurn = newlyCompleted.length > 0;
+    movesRemaining = currentGs.moves_remaining - 1 + (extraTurn ? 1 : 0);
+
+    // Check game end
+    const gameEnded = !hasRemainingSlices(updatedPossibleSlices, updatedEdges);
+
+    // Write updated state
+    await supabase.from('game_states').update({
+      edges: updatedEdges,
+      possible_slices: updatedPossibleSlices,
+      captured_slices: newCapturedSlices,
+      moves_remaining: movesRemaining,
+      updated_at: new Date().toISOString(),
+    }).eq('match_id', matchId);
+
+    // Update bot's score
+    const botScore = newCapturedSlices.filter((s: PizzaSlice) => s.capturedBy === botPlayerId).length;
+    await supabase.from('match_players').update({ score: botScore })
+      .eq('match_id', matchId).eq('player_fid', botFid);
+
+    if (gameEnded) {
+      console.log('[bot-inline] Game ended during bot turn');
+      const players = sortedPlayers.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
+      const winnerId = determineWinner(players, newCapturedSlices);
+      const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+      await supabase.from('matches').update({
+        status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString(),
+      }).eq('id', matchId);
+      return;
+    }
+  }
+
+  // Step 3: End bot's turn — advance to next player
+  const { data: finalMatch } = await supabase.from('matches')
+    .select('turn_number').eq('id', matchId).single();
+  const nextIdx = (botPlayerIndex + 1) % sortedPlayers.length;
+
+  await supabase.from('matches').update({
+    current_player_index: nextIdx,
+    turn_number: (finalMatch?.turn_number || 1) + 1,
+  }).eq('id', matchId);
+
+  await supabase.from('game_states').update({
+    dice_roll: null, moves_remaining: 0, updated_at: new Date().toISOString(),
+  }).eq('match_id', matchId);
+
+  console.log(`[bot-inline] Bot turn complete, next player index=${nextIdx}`);
 }
