@@ -121,11 +121,11 @@ function GameContent() {
   }, [gamePhase, isMyTurn, isRolling, hasRolled, rollDice]);
 
   const handleEdgeClick = useCallback(async (edgeId: string) => {
-    if (!canDrawEdge(edgeId) || !currentPlayer || !isMyTurn) return;
-
+    // drawEdge validates via gameStateRef (always-current), so we don't need
+    // to duplicate checks here that can go stale in the closure.
     const result = await drawEdge(edgeId);
 
-    if (result.captured.length > 0) {
+    if (result.captured.length > 0 && currentPlayer) {
       // Show capture notification
       setCaptureNotification({
         playerName: currentPlayer.displayName,
@@ -141,10 +141,10 @@ function GameContent() {
       if (newStreak >= 5) {
         shareCaptureStreak(newStreak);
       }
-    } else {
+    } else if (result.captured.length === 0) {
       setCaptureStreak(0);
     }
-  }, [canDrawEdge, currentPlayer, isMyTurn, drawEdge, captureStreak, shareCaptureStreak]);
+  }, [drawEdge, currentPlayer, captureStreak, shareCaptureStreak]);
 
   const handleEndTurn = useCallback(async () => {
     setCaptureStreak(0);

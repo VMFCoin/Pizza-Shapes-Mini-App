@@ -59,6 +59,9 @@ export function useRealtimeGame(
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref to always read latest game state in async callbacks (avoids stale closures)
+  const gameStateRef = useRef<GameState | null>(null);
+  gameStateRef.current = gameState;
 
   // Derive current player from game state
   const currentPlayer = useMemo(() => {
@@ -348,14 +351,22 @@ export function useRealtimeGame(
   }, [matchId, currentPlayerFid, handleGameStateUpdate, handleMatchUpdate, handleMatchPlayerUpdate]);
 
   // Roll dice (server-authoritative)
+  // Uses gameStateRef to avoid stale closure issues
   const rollDice = useCallback(async (): Promise<number> => {
-    if (!matchId || !gameState || !isMyTurn || gameState.gameOver) {
+    const currentState = gameStateRef.current;
+    if (!matchId || !currentState || !currentPlayerFid || currentState.gameOver) {
+      return 0;
+    }
+
+    // Check it's our turn using ref
+    const currentP = currentState.players[currentState.currentPlayerIndex];
+    if (currentP?.fid !== currentPlayerFid) {
       return 0;
     }
 
     // Prevent rolling if already rolled this turn (moves allocated or dice already shown)
-    if (gameState.movesRemaining > 0 || gameState.diceRoll !== null) {
-      return gameState.diceRoll || 0;
+    if (currentState.movesRemaining > 0 || currentState.diceRoll !== null) {
+      return currentState.diceRoll || 0;
     }
 
     try {
@@ -400,17 +411,31 @@ export function useRealtimeGame(
       setError(err.message || 'Failed to roll dice');
       return 0;
     }
-  }, [matchId, gameState, isMyTurn, currentPlayerFid]);
+  }, [matchId, currentPlayerFid]);
 
   // Draw edge (server-authoritative with optimistic update)
+  // Uses gameStateRef to read the LATEST state, avoiding stale closure issues
+  // when multiple edges are drawn rapidly within the same turn.
   const drawEdge = useCallback(async (edgeId: EdgeID): Promise<{ captured: PizzaSlice[]; extraTurn: boolean }> => {
-    if (!matchId || !gameState || !isMyTurn || gameState.gameOver) {
+    const currentState = gameStateRef.current;
+    if (!matchId || !currentState || !currentPlayerFid || currentState.gameOver) {
       return { captured: [], extraTurn: false };
     }
 
-    // Check if edge can be drawn
-    const edge = gameState.edges.find(e => e.id === edgeId);
-    if (!edge || edge.claimedBy !== null || gameState.movesRemaining <= 0) {
+    // Check if it's actually our turn (using ref for latest state)
+    const currentP = currentState.players[currentState.currentPlayerIndex];
+    if (currentP?.fid !== currentPlayerFid) {
+      return { captured: [], extraTurn: false };
+    }
+
+    // Check if edge can be drawn using latest state
+    const edge = currentState.edges.find(e => e.id === edgeId);
+    if (!edge || edge.claimedBy !== null || currentState.movesRemaining <= 0) {
+      return { captured: [], extraTurn: false };
+    }
+
+    // Also block edges that are already optimistically claimed
+    if (optimisticEdges.has(edgeId)) {
       return { captured: [], extraTurn: false };
     }
 
@@ -471,11 +496,17 @@ export function useRealtimeGame(
       setError(err.message || 'Failed to draw edge');
       return { captured: [], extraTurn: false };
     }
-  }, [matchId, gameState, isMyTurn, currentPlayerFid]);
+  }, [matchId, currentPlayerFid, optimisticEdges]);
 
   // End turn
+  // Uses gameStateRef to avoid stale closure issues
   const endTurn = useCallback(async (): Promise<void> => {
-    if (!matchId || !isMyTurn || gameState?.gameOver) return;
+    const currentState = gameStateRef.current;
+    if (!matchId || !currentPlayerFid || !currentState || currentState.gameOver) return;
+
+    // Check it's our turn using ref
+    const currentP = currentState.players[currentState.currentPlayerIndex];
+    if (currentP?.fid !== currentPlayerFid) return;
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
@@ -500,7 +531,7 @@ export function useRealtimeGame(
     } catch (err: any) {
       setError(err.message || 'Failed to end turn');
     }
-  }, [matchId, isMyTurn, gameState, currentPlayerFid]);
+  }, [matchId, currentPlayerFid]);
 
   // Check if edge can be drawn
   const canDrawEdge = useCallback((edgeId: EdgeID): boolean => {
