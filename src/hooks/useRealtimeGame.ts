@@ -58,6 +58,7 @@ export function useRealtimeGame(
   const gameChannelRef = useRef<RealtimeChannel | null>(null);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Derive current player from game state
   const currentPlayer = useMemo(() => {
@@ -452,8 +453,12 @@ export function useRealtimeGame(
 
       if (captured.length > 0) {
         setGamePhase('capturing');
-        setTimeout(() => {
-          if (data.gameOver) {
+        // Clear any previous capture timer to prevent stale closures
+        if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
+        const gameOver = data.gameOver;
+        captureTimerRef.current = setTimeout(() => {
+          captureTimerRef.current = null;
+          if (gameOver) {
             setGamePhase('gameOver');
           } else {
             setGamePhase('drawing');
@@ -473,7 +478,7 @@ export function useRealtimeGame(
     if (!matchId || !isMyTurn || gameState?.gameOver) return;
 
     try {
-      const { error: invokeError } = await supabase.functions.invoke('validate-move', {
+      const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
         body: {
           matchId,
           playerFid: currentPlayerFid,
@@ -486,7 +491,12 @@ export function useRealtimeGame(
         throw new Error(invokeError.message);
       }
 
-      setGamePhase('rolling');
+      // Check if the server detected game-over during end_turn
+      if (data?.gameOver) {
+        setGamePhase('gameOver');
+      } else {
+        setGamePhase('rolling');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to end turn');
     }
@@ -561,6 +571,9 @@ export function useRealtimeGame(
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
       }
+      if (captureTimerRef.current) {
+        clearTimeout(captureTimerRef.current);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId, currentPlayerFid]);
@@ -569,6 +582,8 @@ export function useRealtimeGame(
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (!matchId || !currentPlayerFid) return;
+      // Don't update connection status for completed games
+      if (gameState?.gameOver) return;
 
       if (document.visibilityState === 'hidden') {
         // Mark as disconnected
@@ -599,7 +614,9 @@ export function useRealtimeGame(
     };
   }, [matchId, currentPlayerFid]);
 
-  // Auto-trigger bot turns when current player is a bot
+  // Auto-trigger bot turns when current player is a bot.
+  // Only the client at player index 0 triggers to prevent duplicate calls
+  // from multiple human clients all firing simultaneously.
   const botTurnTriggeredRef = useRef<string | null>(null);
   useEffect(() => {
     if (!gameState || gameState.gameOver || !matchId) {
@@ -612,6 +629,11 @@ export function useRealtimeGame(
       botTurnTriggeredRef.current = null;
       return;
     }
+
+    // Only the player at index 0 triggers bot turns to avoid N clients
+    // all calling trigger-bot-turn simultaneously
+    const myIndex = gameState.players.findIndex(p => p.fid === currentPlayerFid);
+    if (myIndex !== 0) return;
 
     // Use a composite key so each unique turn gets its own trigger,
     // preventing deadlock when consecutive bots play.
@@ -631,7 +653,7 @@ export function useRealtimeGame(
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId]);
+  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, currentPlayerFid]);
 
   return {
     gameState: mergedGameState,

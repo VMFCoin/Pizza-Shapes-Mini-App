@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { PLAYER_COLORS, ENTRY_TIERS, CELL_SIZE, PADDING } from '../_shared/constants.ts';
+import { PLAYER_COLORS, ENTRY_TIERS, CELL_SIZE, PADDING, BOT_FID } from '../_shared/constants.ts';
 import {
   createGrid,
   generateAllPossibleEdges,
@@ -71,7 +71,7 @@ serve(async (req) => {
       player_fid: fid,
       color: PLAYER_COLORS[index % PLAYER_COLORS.length],
       player_index: index,
-      is_bot: false,
+      is_bot: fid === BOT_FID,
       is_connected: true,
     }));
 

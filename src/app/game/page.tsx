@@ -64,9 +64,10 @@ function GameContent() {
   // Navigate to game over when game ends
   useEffect(() => {
     if (isGameOver && winner) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         router.push(`/game-over?matchId=${matchId}&winner=${winner.id}`);
       }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [isGameOver, winner, matchId, router]);
 
@@ -314,7 +315,7 @@ function GameContent() {
         </motion.div>
 
         {/* Score summary - Keycap style pills */}
-        <div className="mt-5 flex gap-2">
+        <div className="mt-5 flex gap-2 flex-wrap justify-center">
           {gameState.players.map((player) => (
             <motion.div
               key={player.id}
