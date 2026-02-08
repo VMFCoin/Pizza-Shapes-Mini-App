@@ -568,12 +568,18 @@ export function useRealtimeGame(
         return;
       }
 
-      // The server-side end_turn now triggers the bot turn directly if the
-      // next player is a bot. Pre-set the ref so the client-side useEffect
-      // fallback doesn't also fire and double-trigger.
+      // The server-side end_turn fires trigger-bot-turn (non-blocking).
+      // Pre-set the ref so the client-side useEffect fallback doesn't
+      // double-trigger. Clear it after 5s so the client can retry if the
+      // server fire-and-forget didn't complete (Deno runtime killed it).
       if (nextPlayer?.isBot) {
         const turnKey = `${nextPlayerIndex}-${currentState.turnNumber + 1}`;
         botTurnTriggeredRef.current = turnKey;
+        setTimeout(() => {
+          if (botTurnTriggeredRef.current === turnKey) {
+            botTurnTriggeredRef.current = null;
+          }
+        }, 5000);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to end turn');

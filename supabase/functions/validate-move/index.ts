@@ -199,26 +199,22 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
       .eq('match_id', match.id);
 
     // If the next player is a bot, trigger bot turn from server.
-    // Small delay ensures DB writes have propagated.
+    // Fire-and-forget: don't await, as trigger-bot-turn takes seconds.
     if (nextPlayer?.is_bot) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const botResp = await fetch(
-          `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-            },
-            body: JSON.stringify({ matchId: match.id }),
-          }
-        );
-        const botResult = await botResp.json();
-        console.log('Bot turn trigger result (turn_skip):', JSON.stringify(botResult));
-      } catch (err: any) {
-        console.error('Failed to trigger bot turn after turn skip:', err);
-      }
+      fetch(
+        `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          },
+          body: JSON.stringify({ matchId: match.id }),
+        }
+      )
+        .then(r => r.json())
+        .then(result => console.log('Bot turn trigger result (turn_skip):', JSON.stringify(result)))
+        .catch(err => console.error('Failed to trigger bot turn after turn skip:', err));
     }
 
     return {
@@ -397,31 +393,27 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
     })
     .eq('match_id', match.id);
 
-  // If the next player is a bot, trigger bot turn directly from the server.
-  // This is more reliable than triggering from the client which has timing issues.
-  // We must await this because Deno edge functions stop execution after sending
-  // the response — fire-and-forget fetch won't complete.
-  // Small delay ensures the DB writes above have fully propagated before
-  // trigger-bot-turn reads the updated current_player_index.
+  // If the next player is a bot, trigger bot turn from the server.
+  // IMPORTANT: Do NOT await this — trigger-bot-turn takes several seconds
+  // (800ms delay per move, multiple DB calls). Awaiting it would block the
+  // validate-move response and cause a timeout, leaving the client hanging.
+  // Deno Deploy will continue executing the fetch promise after the response
+  // is sent (unlike setTimeout which gets cancelled).
   if (nextPlayer?.is_bot) {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const botResp = await fetch(
-        `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          },
-          body: JSON.stringify({ matchId: match.id }),
-        }
-      );
-      const botResult = await botResp.json();
-      console.log('Bot turn trigger result (end_turn):', JSON.stringify(botResult));
-    } catch (err: any) {
-      console.error('Failed to trigger bot turn from end_turn:', err);
-    }
+    fetch(
+      `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({ matchId: match.id }),
+      }
+    )
+      .then(r => r.json())
+      .then(result => console.log('Bot turn trigger result (end_turn):', JSON.stringify(result)))
+      .catch(err => console.error('Failed to trigger bot turn from end_turn:', err));
   }
 
   return {
