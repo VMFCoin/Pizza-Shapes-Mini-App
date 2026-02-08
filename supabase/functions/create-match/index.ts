@@ -43,6 +43,13 @@ serve(async (req) => {
       );
     }
 
+    if (playerFids.length > tierConfig.maxPlayers) {
+      return new Response(
+        JSON.stringify({ error: 'Too many players' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create the match
     const { data: match, error: matchError } = await supabase
       .from('matches')

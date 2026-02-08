@@ -139,8 +139,36 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
     };
   }
 
-  const roll = Math.floor(Math.random() * 6) + 1;
   const edges = gameState.edges as Edge[];
+  const possibleSlices = gameState.possible_slices as PizzaSlice[];
+
+  // Check if the game should end — no remaining slices means no point rolling.
+  // Without this check, when availableMoves=0, every roll > 0 skips turn infinitely.
+  if (!hasRemainingSlices(possibleSlices, edges)) {
+    const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
+    const capturedSlices = gameState.captured_slices as PizzaSlice[];
+    const winnerId = determineWinner(players, capturedSlices);
+    const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+
+    await supabase
+      .from('matches')
+      .update({
+        status: 'completed',
+        winner_fid: winnerFid,
+        ended_at: new Date().toISOString(),
+      })
+      .eq('id', match.id);
+
+    return {
+      diceRoll: 0,
+      movesRemaining: 0,
+      turnSkipped: false,
+      availableMoves: 0,
+      gameOver: true,
+    };
+  }
+
+  const roll = Math.floor(Math.random() * 6) + 1;
   const availableMoves = countAvailableMoves(edges);
 
   // If roll is higher than available moves, skip turn

@@ -205,12 +205,14 @@ export function useRealtimeGame(
 
       // Update phase based on moves remaining (rolling vs drawing).
       // Game-over and waiting phases are handled by handleMatchUpdate.
+      // Don't overwrite 'capturing' phase — it has its own timer to transition.
       if (!updated.gameOver) {
-        if (newState.moves_remaining > 0) {
-          setGamePhase('drawing');
-        } else if (newState.dice_roll === null) {
-          setGamePhase('rolling');
-        }
+        setGamePhase(prev => {
+          if (prev === 'capturing') return prev; // protect capture animation
+          if (newState.moves_remaining > 0) return 'drawing';
+          if (newState.dice_roll === null) return 'rolling';
+          return prev;
+        });
       }
 
       return updated;
@@ -369,14 +371,27 @@ export function useRealtimeGame(
         throw new Error(invokeError.message);
       }
 
-      // Optimistically update diceRoll and movesRemaining so the UI shows the result
-      // before the realtime subscription delivers it. Phase will update when
-      // handleGameStateUpdate or handleMatchUpdate fires from the DB change.
-      if (!data.turnSkipped) {
+      // Handle game-over detected during roll (no remaining slices)
+      if (data.gameOver) {
         setGameState(prev => {
           if (!prev) return prev;
-          return { ...prev, diceRoll: data.diceRoll, movesRemaining: data.movesRemaining };
+          return { ...prev, gameOver: true };
         });
+        setGamePhase('gameOver');
+        return 0;
+      }
+
+      // Optimistically update diceRoll so the dice animation shows the final value.
+      // Always set diceRoll even on turnSkipped — the animation needs to display it.
+      setGameState(prev => {
+        if (!prev) return prev;
+        return { ...prev, diceRoll: data.diceRoll, movesRemaining: data.movesRemaining };
+      });
+
+      // Set phase to 'drawing' immediately when roll grants moves, so the UI
+      // doesn't get stuck waiting for realtime if it's delayed or dropped.
+      if (!data.turnSkipped && data.movesRemaining > 0) {
+        setGamePhase('drawing');
       }
 
       return data.diceRoll;
@@ -585,22 +600,24 @@ export function useRealtimeGame(
   }, [matchId, currentPlayerFid]);
 
   // Auto-trigger bot turns when current player is a bot
-  const botTurnTriggeredRef = useRef(false);
+  const botTurnTriggeredRef = useRef<string | null>(null);
   useEffect(() => {
     if (!gameState || gameState.gameOver || !matchId) {
-      botTurnTriggeredRef.current = false;
+      botTurnTriggeredRef.current = null;
       return;
     }
 
     const currentP = gameState.players[gameState.currentPlayerIndex];
     if (!currentP?.isBot) {
-      botTurnTriggeredRef.current = false;
+      botTurnTriggeredRef.current = null;
       return;
     }
 
-    // Avoid double-triggering for the same turn
-    if (botTurnTriggeredRef.current) return;
-    botTurnTriggeredRef.current = true;
+    // Use a composite key so each unique turn gets its own trigger,
+    // preventing deadlock when consecutive bots play.
+    const turnKey = `${gameState.currentPlayerIndex}-${gameState.turnNumber}`;
+    if (botTurnTriggeredRef.current === turnKey) return;
+    botTurnTriggeredRef.current = turnKey;
 
     const timer = setTimeout(async () => {
       try {
@@ -609,7 +626,7 @@ export function useRealtimeGame(
         });
       } catch (err) {
         console.error('Failed to trigger bot turn:', err);
-        botTurnTriggeredRef.current = false;
+        botTurnTriggeredRef.current = null;
       }
     }, 1000);
 

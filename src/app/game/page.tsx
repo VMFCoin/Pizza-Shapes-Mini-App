@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -48,6 +48,12 @@ function GameContent() {
 
   const [isRolling, setIsRolling] = useState(false);
   const [hasRolled, setHasRolled] = useState(false);
+  // Ref-based lock to prevent double-tap race condition (refs aren't stale in closures)
+  const rollLockRef = useRef(false);
+  // Stores the dice result during the animation so realtime updates can't erase it
+  const diceResultRef = useRef<number | null>(null);
+  // Keep dice visible briefly after roll animation ends (for turn-skip visibility)
+  const [showDiceResult, setShowDiceResult] = useState(false);
   const [captureNotification, setCaptureNotification] = useState<{
     playerName: string;
     playerColor: string;
@@ -75,18 +81,24 @@ function GameContent() {
     }
   }, [gameState, gamePhase, isGameOver, isMyTurn, endTurn]);
 
-  // Reset hasRolled when it becomes a new turn for this player
+  // Reset roll state when it becomes a new turn for this player
   useEffect(() => {
     if (gamePhase === 'rolling' && isMyTurn && gameState?.diceRoll === null) {
       setHasRolled(false);
+      rollLockRef.current = false;
+      diceResultRef.current = null;
     }
   }, [gamePhase, isMyTurn, gameState?.diceRoll]);
 
   const handleRoll = useCallback(async () => {
+    // Ref-based lock prevents double-tap even if React hasn't re-rendered yet
+    if (rollLockRef.current) return;
     if (gamePhase !== 'rolling' || !isMyTurn || isRolling || hasRolled) return;
+    rollLockRef.current = true;
 
     setIsRolling(true);
     setHasRolled(true);
+    diceResultRef.current = null;
 
     // Start server call immediately (runs in parallel with animation)
     const rollPromise = rollDice();
@@ -94,14 +106,17 @@ function GameContent() {
     // Wait for the animation to finish (1500ms)
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Wait for server result too (likely already resolved)
-    await rollPromise;
+    // Capture the result so realtime updates can't erase it during reveal
+    const result = await rollPromise;
+    diceResultRef.current = result;
 
-    // Stop the rolling animation — dice shows final value briefly
+    // Stop the rolling animation — show the dice result briefly
     setIsRolling(false);
+    setShowDiceResult(true);
 
-    // Give the user 800ms to see the result before phase transitions
-    // (the realtime update or rollDice will set gamePhase to 'drawing')
+    // Keep the dice result visible for 800ms before allowing phase transition
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setShowDiceResult(false);
   }, [gamePhase, isMyTurn, isRolling, hasRolled, rollDice]);
 
   const handleEdgeClick = useCallback(async (edgeId: string) => {
@@ -326,11 +341,12 @@ function GameContent() {
       {/* Bottom controls - Updated with keycap styling */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-3 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
         <div className="card p-4">
-          {/* Dice roll phase */}
-          {gamePhase === 'rolling' && isMyTurn && (
+          {/* Dice roll phase — keep visible while isRolling OR showDiceResult so
+              animation completes and result is briefly visible (even on turn skip) */}
+          {(isRolling || showDiceResult || (gamePhase === 'rolling' && isMyTurn)) && (
             <div className="flex flex-col items-center">
               <Dice
-                value={gameState.diceRoll}
+                value={diceResultRef.current ?? gameState.diceRoll}
                 isRolling={isRolling}
                 onRoll={handleRoll}
                 disabled={!isMyTurn || connectionStatus !== 'connected' || hasRolled}
@@ -338,8 +354,8 @@ function GameContent() {
             </div>
           )}
 
-          {/* Drawing phase */}
-          {gamePhase === 'drawing' && isMyTurn && (
+          {/* Drawing phase — only show when dice animation and result display are done */}
+          {!isRolling && !showDiceResult && gamePhase === 'drawing' && isMyTurn && (
             <div className="flex flex-col items-center gap-2">
               <div className="flex items-center gap-2">
                 <span 
@@ -368,8 +384,8 @@ function GameContent() {
             </div>
           )}
 
-          {/* Waiting for opponent */}
-          {!isMyTurn && !isGameOver && (
+          {/* Waiting for opponent — hide while dice is still animating or showing result */}
+          {!isRolling && !showDiceResult && !isMyTurn && !isGameOver && (
             <div className="text-center py-2">
               <motion.p
                 className="text-stone-400 font-medium flex items-center justify-center gap-2"
