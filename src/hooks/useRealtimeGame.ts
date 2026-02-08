@@ -568,26 +568,12 @@ export function useRealtimeGame(
         return;
       }
 
-      // If the next player is a bot, trigger bot turn directly now that
-      // the server has confirmed the turn advance. This avoids the race
-      // condition where the useEffect bot trigger fires before the server
-      // has updated current_player_index in the DB.
+      // The server-side end_turn now triggers the bot turn directly if the
+      // next player is a bot. Pre-set the ref so the client-side useEffect
+      // fallback doesn't also fire and double-trigger.
       if (nextPlayer?.isBot) {
-        // Pre-set the ref so the useEffect bot trigger doesn't also fire
         const turnKey = `${nextPlayerIndex}-${currentState.turnNumber + 1}`;
         botTurnTriggeredRef.current = turnKey;
-
-        setTimeout(async () => {
-          try {
-            await supabase.functions.invoke('trigger-bot-turn', {
-              body: { matchId },
-            });
-          } catch (err) {
-            console.error('Failed to trigger bot turn after endTurn:', err);
-            // Reset ref so useEffect can retry
-            botTurnTriggeredRef.current = null;
-          }
-        }, 500);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to end turn');

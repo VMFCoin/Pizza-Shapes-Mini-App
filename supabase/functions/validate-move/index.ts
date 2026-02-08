@@ -177,6 +177,7 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
       (a: any, b: any) => a.player_index - b.player_index
     );
     const nextPlayerIndex = (match.current_player_index + 1) % sortedPlayers.length;
+    const nextPlayer = sortedPlayers[nextPlayerIndex];
 
     // Update match - advance to next player
     await supabase
@@ -196,6 +197,25 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
         updated_at: new Date().toISOString(),
       })
       .eq('match_id', match.id);
+
+    // If the next player is a bot, trigger bot turn from server
+    if (nextPlayer?.is_bot) {
+      try {
+        await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            },
+            body: JSON.stringify({ matchId: match.id }),
+          }
+        );
+      } catch (err: any) {
+        console.error('Failed to trigger bot turn after turn skip:', err);
+      }
+    }
 
     return {
       diceRoll: roll,
@@ -354,6 +374,7 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
     (a: any, b: any) => a.player_index - b.player_index
   );
   const nextPlayerIndex = (match.current_player_index + 1) % sortedPlayers.length;
+  const nextPlayer = sortedPlayers[nextPlayerIndex];
 
   await supabase
     .from('matches')
@@ -372,9 +393,32 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
     })
     .eq('match_id', match.id);
 
+  // If the next player is a bot, trigger bot turn directly from the server.
+  // This is more reliable than triggering from the client which has timing issues.
+  // We must await this because Deno edge functions stop execution after sending
+  // the response — fire-and-forget fetch won't complete.
+  if (nextPlayer?.is_bot) {
+    try {
+      await fetch(
+        `${Deno.env.get('SUPABASE_URL')}/functions/v1/trigger-bot-turn`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          },
+          body: JSON.stringify({ matchId: match.id }),
+        }
+      );
+    } catch (err: any) {
+      console.error('Failed to trigger bot turn from end_turn:', err);
+    }
+  }
+
   return {
     turnEnded: true,
     gameOver: false,
     nextPlayerIndex,
+    nextPlayerIsBot: nextPlayer?.is_bot ?? false,
   };
 }
