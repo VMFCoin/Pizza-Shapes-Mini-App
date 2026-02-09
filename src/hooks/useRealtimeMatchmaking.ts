@@ -167,48 +167,64 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   // Trigger server-side matchmaking with only ready players
   const triggerMatchmaking = useCallback(async (tier: number, readyPlayers: QueuePlayer[]) => {
     try {
+      const playerFids = readyPlayers.map(p => p.fid);
+      console.log('[matchmaking] Calling create-match:', { tier, playerFids });
+
       const { data, error: invokeError } = await supabase.functions.invoke('create-match', {
-        body: {
-          tier,
-          playerFids: readyPlayers.map(p => p.fid),
-        },
+        body: { tier, playerFids },
       });
 
+      console.log('[matchmaking] create-match response:', JSON.stringify({ data, error: invokeError }));
+
       if (invokeError) {
-        console.error('Matchmaking error:', invokeError);
+        console.error('[matchmaking] create-match error:', invokeError);
         matchmakingTriggeredRef.current = false; // Allow retry
         return;
       }
 
       // If server returned a match ID (new or already-matched), navigate directly
       if (data?.matchId) {
+        console.log('[matchmaking] Match ready, navigating:', data.matchId);
         setMatchId(data.matchId);
         setIsMatchReady(true);
+      } else {
+        // Response was successful but no matchId — reset guard to allow retry
+        console.error('[matchmaking] No matchId in response:', data);
+        matchmakingTriggeredRef.current = false;
       }
     } catch (err) {
-      console.error('Failed to trigger matchmaking:', err);
+      console.error('[matchmaking] Exception in triggerMatchmaking:', err);
       matchmakingTriggeredRef.current = false; // Allow retry
     }
   }, []);
 
   // Mark current player as ready (after payment)
   const markPlayerReady = useCallback(async () => {
-    if (!isSupabaseAvailable() || !queueEntryIdRef.current || !currentPlayerRef.current) return;
+    if (!isSupabaseAvailable() || !queueEntryIdRef.current || !currentPlayerRef.current) {
+      console.warn('[matchmaking] Cannot mark ready:', {
+        supabase: isSupabaseAvailable(),
+        queueEntry: queueEntryIdRef.current,
+        player: currentPlayerRef.current?.fid,
+      });
+      return;
+    }
 
     try {
+      console.log('[matchmaking] Marking player ready:', { queueEntryId: queueEntryIdRef.current, fid: currentPlayerRef.current.fid });
       const { error: updateError } = await (supabase as any)
         .from('match_queue')
         .update({ is_ready: true })
         .eq('id', queueEntryIdRef.current);
 
       if (updateError) {
-        console.error('Error marking player ready:', updateError);
+        console.error('[matchmaking] Error marking player ready:', updateError);
         return;
       }
 
+      console.log('[matchmaking] Player marked ready successfully');
       setIsCurrentPlayerReady(true);
     } catch (err) {
-      console.error('Failed to mark player ready:', err);
+      console.error('[matchmaking] Failed to mark player ready:', err);
     }
   }, []);
 
@@ -238,21 +254,31 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
           filter: `tier=eq.${tier}`,
         },
         async (payload) => {
-          // Refresh queue players when changes occur
-          await refreshQueuePlayers(tier);
+          console.log('[matchmaking] Realtime event:', payload.eventType, payload.new);
 
-          // Check if current player was matched
+          // Check if current player was matched BEFORE refreshing queue
+          // (refreshQueuePlayers filters by status='waiting', which would miss matched entries)
           if (
             payload.eventType === 'UPDATE' &&
             payload.new &&
-            (payload.new as MatchQueueRow).player_fid === currentPlayerRef.current?.fid &&
-            (payload.new as MatchQueueRow).status === 'matched' &&
-            (payload.new as MatchQueueRow).match_id
+            (payload.new as any).status === 'matched' &&
+            (payload.new as any).match_id
           ) {
-            const newMatchId = (payload.new as MatchQueueRow).match_id as string;
-            setMatchId(newMatchId);
-            setIsMatchReady(true);
+            const matchedFid = (payload.new as any).player_fid;
+            const newMatchId = (payload.new as any).match_id as string;
+            console.log('[matchmaking] Player matched via realtime:', { matchedFid, newMatchId, myFid: currentPlayerRef.current?.fid });
+
+            // If THIS player was matched, navigate immediately
+            if (matchedFid === currentPlayerRef.current?.fid) {
+              console.log('[matchmaking] Current player matched! Setting matchId:', newMatchId);
+              setMatchId(newMatchId);
+              setIsMatchReady(true);
+              return; // No need to refresh queue
+            }
           }
+
+          // Refresh queue players for other changes (new joins, ready status)
+          await refreshQueuePlayers(tier);
         }
       )
       .subscribe((status) => {
@@ -390,14 +416,53 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   // Count ready players
   const readyPlayerCount = queuePlayers.filter(p => p.isReady).length;
 
+  // Polling fallback: check if current player has been matched
+  // This handles cases where realtime subscription misses the matched event
+  useEffect(() => {
+    if (!isInQueue || isMatchReady || !currentPlayerRef.current || !isSupabaseAvailable()) return;
+
+    const pollInterval = setInterval(async () => {
+      if (isMatchReady) return; // Already matched, stop polling
+
+      const { data, error: pollError } = await (supabase as any)
+        .from('match_queue')
+        .select('match_id, status')
+        .eq('player_fid', currentPlayerRef.current?.fid)
+        .eq('tier', selectedTier)
+        .eq('status', 'matched')
+        .order('joined_at', { ascending: false })
+        .limit(1);
+
+      if (pollError) {
+        console.error('[matchmaking] Poll error:', pollError);
+        return;
+      }
+
+      if (data && data.length > 0 && data[0].match_id) {
+        console.log('[matchmaking] Match found via polling:', data[0].match_id);
+        setMatchId(data[0].match_id);
+        setIsMatchReady(true);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [isInQueue, isMatchReady, selectedTier]);
+
   // Trigger matchmaking when enough human players are ready
   useEffect(() => {
+    console.log('[matchmaking] Trigger check:', {
+      readyPlayerCount,
+      isCurrentPlayerReady,
+      matchmakingTriggered: matchmakingTriggeredRef.current,
+      isMatchReady,
+    });
     if (
       readyPlayerCount >= MIN_PLAYERS_TO_START &&
       isCurrentPlayerReady &&
       !matchmakingTriggeredRef.current &&
       !isMatchReady
     ) {
+      console.log('[matchmaking] Triggering matchmaking (primary)');
       matchmakingTriggeredRef.current = true;
       const readyPlayers = queuePlayers.filter(p => p.isReady);
       triggerMatchmaking(selectedTier, readyPlayers);
@@ -412,6 +477,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       isCurrentPlayerReady &&
       !isMatchReady
     ) {
+      console.log('[matchmaking] Triggering matchmaking (countdown fallback)');
       matchmakingTriggeredRef.current = false; // Reset to allow retry
       const readyPlayers = queuePlayers.filter(p => p.isReady);
       matchmakingTriggeredRef.current = true;

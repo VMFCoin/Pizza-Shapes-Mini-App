@@ -25,6 +25,7 @@ serve(async (req) => {
     );
 
     const { tier, playerFids } = await req.json();
+    console.log('[create-match] Request:', { tier, playerFids });
 
     // Validate tier
     const tierConfig = ENTRY_TIERS.find(t => t.id === tier);
@@ -60,7 +61,7 @@ serve(async (req) => {
       .limit(1);
 
     if (alreadyMatched && alreadyMatched.length > 0) {
-      // Players already matched — return existing match ID so client navigates correctly
+      console.log('[create-match] Already matched, returning existing:', alreadyMatched[0].match_id);
       return new Response(
         JSON.stringify({ matchId: alreadyMatched[0].match_id, alreadyMatched: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -126,15 +127,18 @@ serve(async (req) => {
     }
 
     // Update queue entries to matched status
-    const { error: queueError } = await supabase
+    const { data: updatedQueue, error: queueError } = await supabase
       .from('match_queue')
       .update({ status: 'matched', match_id: match.id })
       .in('player_fid', playerFids)
       .eq('tier', tier)
-      .eq('status', 'waiting');
+      .eq('status', 'waiting')
+      .select('id, player_fid, status, match_id');
+
+    console.log('[create-match] Queue update result:', { updatedQueue, queueError });
 
     if (queueError) {
-      console.error('Failed to update queue entries:', queueError);
+      console.error('[create-match] Failed to update queue entries:', queueError);
       // Non-fatal error, continue
     }
 
@@ -153,6 +157,7 @@ serve(async (req) => {
       console.error('Failed to activate match:', activateError);
     }
 
+    console.log('[create-match] Match created successfully:', match.id);
     return new Response(
       JSON.stringify({
         matchId: match.id,
