@@ -152,7 +152,7 @@ contract PizzaShapesSettlementV3 is PizzaUUPSBase {
         } else {
             if (m.settled) revert MatchAlreadySettled();
             if (m.entryAmount != amount) revert AmountMismatch();
-            if (m.players.length >= 6) revert MatchFull();
+            if (m.players.length >= 8) revert MatchFull();
         }
 
         // Check not already entered

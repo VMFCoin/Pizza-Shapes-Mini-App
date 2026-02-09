@@ -6,13 +6,15 @@ export const PLAYER_COLORS = [
   '#95E1D3', // Mint
   '#F38181', // Coral
   '#AA96DA', // Lavender
+  '#7EC8E3', // Sky Blue
+  '#C9E4CA', // Sage
 ];
 
 // Entry tier configurations
 export const ENTRY_TIERS = [
-  { id: 1, amount: 0.25, label: '$0.25', description: '4x4 Beginner', gridSize: 4, minPlayers: 2, maxPlayers: 2 },
-  { id: 2, amount: 0.50, label: '$0.50', description: '6x6 Board', gridSize: 6, minPlayers: 2, maxPlayers: 4 },
-  { id: 3, amount: 1.00, label: '$1.00', description: '8x8 Board', gridSize: 8, minPlayers: 2, maxPlayers: 6 },
+  { id: 1, amount: 0.25, label: '$0.25', description: '4x4 Beginner', gridSize: 4, minPlayers: 2, maxPlayers: 4 },
+  { id: 2, amount: 0.50, label: '$0.50', description: '6x6 Board', gridSize: 6, minPlayers: 2, maxPlayers: 6 },
+  { id: 3, amount: 1.00, label: '$1.00', description: '8x8 Board', gridSize: 8, minPlayers: 2, maxPlayers: 8 },
 ];
 
 // Game configuration

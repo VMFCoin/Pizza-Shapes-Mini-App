@@ -50,6 +50,23 @@ serve(async (req) => {
       );
     }
 
+    // Check if any of these players are already matched (prevent duplicate matches)
+    const { data: alreadyMatched } = await supabase
+      .from('match_queue')
+      .select('player_fid, match_id')
+      .in('player_fid', playerFids)
+      .eq('tier', tier)
+      .eq('status', 'matched')
+      .limit(1);
+
+    if (alreadyMatched && alreadyMatched.length > 0) {
+      // Players already matched — return existing match ID so client navigates correctly
+      return new Response(
+        JSON.stringify({ matchId: alreadyMatched[0].match_id, alreadyMatched: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create the match
     const { data: match, error: matchError } = await supabase
       .from('matches')

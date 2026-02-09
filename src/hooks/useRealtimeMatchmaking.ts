@@ -49,6 +49,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const currentPlayerRef = useRef<Player | null>(currentPlayer);
   const previousPlayerCountRef = useRef<number>(0);
   const isJoiningRef = useRef(false);
+  const matchmakingTriggeredRef = useRef(false);
 
   // Keep currentPlayer ref updated
   useEffect(() => {
@@ -164,7 +165,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   };
 
   // Trigger server-side matchmaking with only ready players
-  const triggerMatchmaking = async (tier: number, readyPlayers: QueuePlayer[]) => {
+  const triggerMatchmaking = useCallback(async (tier: number, readyPlayers: QueuePlayer[]) => {
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('create-match', {
         body: {
@@ -175,11 +176,20 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
       if (invokeError) {
         console.error('Matchmaking error:', invokeError);
+        matchmakingTriggeredRef.current = false; // Allow retry
+        return;
+      }
+
+      // If server returned a match ID (new or already-matched), navigate directly
+      if (data?.matchId) {
+        setMatchId(data.matchId);
+        setIsMatchReady(true);
       }
     } catch (err) {
       console.error('Failed to trigger matchmaking:', err);
+      matchmakingTriggeredRef.current = false; // Allow retry
     }
-  };
+  }, []);
 
   // Mark current player as ready (after payment)
   const markPlayerReady = useCallback(async () => {
@@ -359,6 +369,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       queueEntryIdRef.current = null;
       previousPlayerCountRef.current = 0;
       isJoiningRef.current = false;
+      matchmakingTriggeredRef.current = false;
     } catch (err) {
       console.error('Leave queue error:', err);
     }
@@ -378,6 +389,35 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
   // Count ready players
   const readyPlayerCount = queuePlayers.filter(p => p.isReady).length;
+
+  // Trigger matchmaking when enough human players are ready
+  useEffect(() => {
+    if (
+      readyPlayerCount >= MIN_PLAYERS_TO_START &&
+      isCurrentPlayerReady &&
+      !matchmakingTriggeredRef.current &&
+      !isMatchReady
+    ) {
+      matchmakingTriggeredRef.current = true;
+      const readyPlayers = queuePlayers.filter(p => p.isReady);
+      triggerMatchmaking(selectedTier, readyPlayers);
+    }
+  }, [readyPlayerCount, isCurrentPlayerReady, isMatchReady, queuePlayers, selectedTier, triggerMatchmaking]);
+
+  // Fallback: if countdown reaches 0 with 2+ ready players but no match, force retry
+  useEffect(() => {
+    if (
+      countdown === 0 &&
+      readyPlayerCount >= MIN_PLAYERS_TO_START &&
+      isCurrentPlayerReady &&
+      !isMatchReady
+    ) {
+      matchmakingTriggeredRef.current = false; // Reset to allow retry
+      const readyPlayers = queuePlayers.filter(p => p.isReady);
+      matchmakingTriggeredRef.current = true;
+      triggerMatchmaking(selectedTier, readyPlayers);
+    }
+  }, [countdown, readyPlayerCount, isCurrentPlayerReady, isMatchReady, queuePlayers, selectedTier, triggerMatchmaking]);
 
   return {
     isInQueue,
