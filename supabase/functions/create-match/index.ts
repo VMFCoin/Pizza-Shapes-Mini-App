@@ -12,6 +12,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Only consider matched entries from the last 2 minutes as "active" (not stale)
+const ACTIVE_MATCH_WINDOW_MS = 2 * 60 * 1000;
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -51,22 +54,53 @@ serve(async (req) => {
       );
     }
 
-    // Check if any of these players are already matched (prevent duplicate matches)
+    // Check if any of these players were RECENTLY matched (prevent duplicate matches)
+    // Only look at entries from the last 2 minutes — old matched entries are stale
+    const recentThreshold = new Date(Date.now() - ACTIVE_MATCH_WINDOW_MS).toISOString();
     const { data: alreadyMatched } = await supabase
       .from('match_queue')
-      .select('player_fid, match_id')
+      .select('player_fid, match_id, joined_at')
       .in('player_fid', playerFids)
       .eq('tier', tier)
       .eq('status', 'matched')
+      .gte('joined_at', recentThreshold)
       .limit(1);
 
-    if (alreadyMatched && alreadyMatched.length > 0) {
-      console.log('[create-match] Already matched, returning existing:', alreadyMatched[0].match_id);
-      return new Response(
-        JSON.stringify({ matchId: alreadyMatched[0].match_id, alreadyMatched: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (alreadyMatched && alreadyMatched.length > 0 && alreadyMatched[0].match_id) {
+      // Verify the match is actually still active (not completed/abandoned)
+      const { data: matchData } = await supabase
+        .from('matches')
+        .select('id, status')
+        .eq('id', alreadyMatched[0].match_id)
+        .single();
+
+      if (matchData && (matchData.status === 'active' || matchData.status === 'countdown')) {
+        console.log('[create-match] Already matched to active game:', matchData.id);
+        return new Response(
+          JSON.stringify({ matchId: matchData.id, alreadyMatched: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Match is completed/abandoned — cancel the stale queue entry and proceed
+      console.log('[create-match] Stale matched entry found, cancelling:', alreadyMatched[0].match_id);
+      await supabase
+        .from('match_queue')
+        .update({ status: 'cancelled' })
+        .eq('match_id', alreadyMatched[0].match_id)
+        .eq('status', 'matched');
     }
+
+    // Cancel any stale waiting entries for these players in this tier
+    // (in case they had old sessions that weren't cleaned up)
+    const staleWaitingThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    await supabase
+      .from('match_queue')
+      .update({ status: 'cancelled' })
+      .in('player_fid', playerFids)
+      .eq('tier', tier)
+      .eq('status', 'waiting')
+      .lt('joined_at', staleWaitingThreshold);
 
     // Create the match
     const { data: match, error: matchError } = await supabase
@@ -98,7 +132,6 @@ serve(async (req) => {
       .insert(matchPlayersData);
 
     if (playersError) {
-      // Rollback match creation
       await supabase.from('matches').delete().eq('id', match.id);
       throw new Error(`Failed to add players: ${playersError.message}`);
     }
@@ -121,12 +154,11 @@ serve(async (req) => {
       });
 
     if (stateError) {
-      // Rollback
       await supabase.from('matches').delete().eq('id', match.id);
       throw new Error(`Failed to create game state: ${stateError.message}`);
     }
 
-    // Update queue entries to matched status
+    // Update queue entries to matched status — only update RECENT waiting entries
     const { data: updatedQueue, error: queueError } = await supabase
       .from('match_queue')
       .update({ status: 'matched', match_id: match.id })
@@ -135,15 +167,16 @@ serve(async (req) => {
       .eq('status', 'waiting')
       .select('id, player_fid, status, match_id');
 
-    console.log('[create-match] Queue update result:', { updatedQueue, queueError });
+    console.log('[create-match] Queue update result:', {
+      updatedCount: updatedQueue?.length ?? 0,
+      queueError: queueError?.message
+    });
 
     if (queueError) {
       console.error('[create-match] Failed to update queue entries:', queueError);
-      // Non-fatal error, continue
     }
 
-    // Activate match immediately — setTimeout won't reliably run after
-    // the response is sent in Deno edge functions
+    // Activate match immediately
     const { error: activateError } = await supabase
       .from('matches')
       .update({
@@ -154,10 +187,10 @@ serve(async (req) => {
       .eq('status', 'countdown');
 
     if (activateError) {
-      console.error('Failed to activate match:', activateError);
+      console.error('[create-match] Failed to activate match:', activateError);
     }
 
-    console.log('[create-match] Match created successfully:', match.id);
+    console.log('[create-match] Match created successfully:', match.id, 'players:', playerFids);
     return new Response(
       JSON.stringify({
         matchId: match.id,
@@ -167,7 +200,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Create match error:', error);
+    console.error('[create-match] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

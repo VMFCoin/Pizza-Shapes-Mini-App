@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { supabase, isSupabaseAvailable, MatchQueueRow, PlayerRow } from '@/lib/supabase';
+import { supabase, isSupabaseAvailable } from '@/lib/supabase';
 import { Player, MatchID, ENTRY_TIERS } from '@/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -30,6 +30,8 @@ interface UseRealtimeMatchmakingReturn {
 
 const COUNTDOWN_SECONDS = 60;
 const MIN_PLAYERS_TO_START = 2;
+// Queue entries older than 5 minutes are considered stale
+const STALE_ENTRY_MS = 5 * 60 * 1000;
 
 export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtimeMatchmakingReturn {
   const [isInQueue, setIsInQueue] = useState(false);
@@ -50,6 +52,8 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const previousPlayerCountRef = useRef<number>(0);
   const isJoiningRef = useRef(false);
   const matchmakingTriggeredRef = useRef(false);
+  // Track when this client joined to filter out stale entries
+  const joinedAtRef = useRef<string | null>(null);
 
   // Keep currentPlayer ref updated
   useEffect(() => {
@@ -58,13 +62,11 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
   // Start or restart countdown (resets to 60s when new player joins)
   const startCountdown = useCallback(() => {
-    // Clear any existing countdown
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
 
-    // Start fresh countdown at 60 seconds
     setCountdown(COUNTDOWN_SECONDS);
     countdownIntervalRef.current = setInterval(() => {
       setCountdown(prev => {
@@ -80,12 +82,13 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     }, 1000);
   }, []);
 
-  // Fetch queue players from database
-  const refreshQueuePlayers = useCallback(async (tier: number, shouldRestartCountdown: boolean = false) => {
-    if (!isSupabaseAvailable()) {
-      console.warn('Supabase client not initialized');
-      return;
-    }
+  // Fetch queue players — only show entries from recent sessions (not stale)
+  const refreshQueuePlayers = useCallback(async (tier: number) => {
+    if (!isSupabaseAvailable()) return;
+
+    // Only show entries from the last 5 minutes to filter out ghost players
+    const staleThreshold = new Date(Date.now() - STALE_ENTRY_MS).toISOString();
+
     const { data, error: fetchError } = await supabase
       .from('match_queue')
       .select(`
@@ -104,10 +107,11 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       `)
       .eq('tier', tier)
       .eq('status', 'waiting')
+      .gte('joined_at', staleThreshold)
       .order('joined_at', { ascending: true });
 
     if (fetchError) {
-      console.error('Error fetching queue:', fetchError);
+      console.error('[matchmaking] Error fetching queue:', fetchError);
       return;
     }
 
@@ -132,13 +136,9 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     // Check if a new player joined (player count increased)
     const previousCount = previousPlayerCountRef.current;
     const newCount = players.length;
-
-    // Reset countdown if a new player joined (count increased)
     if (newCount > previousCount && previousCount > 0) {
       startCountdown();
     }
-
-    // Update the previous count
     previousPlayerCountRef.current = newCount;
 
     setQueuePlayers(players);
@@ -151,20 +151,14 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       }
     }
 
-    // Update queue position for current player
+    // Update queue position
     if (currentPlayerRef.current) {
       const position = players.findIndex(p => p.fid === currentPlayerRef.current?.fid);
       setQueuePosition(position >= 0 ? position + 1 : null);
     }
   }, [startCountdown]);
 
-  // Get max players for tier
-  const getMaxPlayers = (tier: number): number => {
-    const tierConfig = ENTRY_TIERS.find(t => t.id === tier);
-    return tierConfig?.maxPlayers || 2;
-  };
-
-  // Trigger server-side matchmaking with only ready players
+  // Trigger server-side matchmaking
   const triggerMatchmaking = useCallback(async (tier: number, readyPlayers: QueuePlayer[]) => {
     try {
       const playerFids = readyPlayers.map(p => p.fid);
@@ -178,23 +172,21 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
       if (invokeError) {
         console.error('[matchmaking] create-match error:', invokeError);
-        matchmakingTriggeredRef.current = false; // Allow retry
+        matchmakingTriggeredRef.current = false;
         return;
       }
 
-      // If server returned a match ID (new or already-matched), navigate directly
       if (data?.matchId) {
         console.log('[matchmaking] Match ready, navigating:', data.matchId);
         setMatchId(data.matchId);
         setIsMatchReady(true);
       } else {
-        // Response was successful but no matchId — reset guard to allow retry
         console.error('[matchmaking] No matchId in response:', data);
         matchmakingTriggeredRef.current = false;
       }
     } catch (err) {
       console.error('[matchmaking] Exception in triggerMatchmaking:', err);
-      matchmakingTriggeredRef.current = false; // Allow retry
+      matchmakingTriggeredRef.current = false;
     }
   }, []);
 
@@ -210,7 +202,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     }
 
     try {
-      console.log('[matchmaking] Marking player ready:', { queueEntryId: queueEntryIdRef.current, fid: currentPlayerRef.current.fid });
+      console.log('[matchmaking] Marking player ready:', { queueEntryId: queueEntryIdRef.current });
       const { error: updateError } = await (supabase as any)
         .from('match_queue')
         .update({ is_ready: true })
@@ -223,20 +215,21 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
       console.log('[matchmaking] Player marked ready successfully');
       setIsCurrentPlayerReady(true);
+
+      // Also trigger a queue refresh so we see the latest ready states
+      await refreshQueuePlayers(selectedTier);
     } catch (err) {
       console.error('[matchmaking] Failed to mark player ready:', err);
     }
-  }, []);
+  }, [refreshQueuePlayers, selectedTier]);
 
   // Subscribe to queue changes for the selected tier
   const subscribeToQueue = useCallback(async (tier: number) => {
     if (!isSupabaseAvailable()) {
-      console.warn('Supabase client not initialized');
       setError('Connection not ready. Please refresh the page.');
       return;
     }
 
-    // Clean up existing subscription
     if (channelRef.current) {
       await supabase.removeChannel(channelRef.current);
     }
@@ -254,10 +247,9 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
           filter: `tier=eq.${tier}`,
         },
         async (payload) => {
-          console.log('[matchmaking] Realtime event:', payload.eventType, payload.new);
+          console.log('[matchmaking] Realtime event:', payload.eventType, (payload.new as any)?.status, (payload.new as any)?.player_fid);
 
-          // Check if current player was matched BEFORE refreshing queue
-          // (refreshQueuePlayers filters by status='waiting', which would miss matched entries)
+          // Check if current player was matched BEFORE refreshing
           if (
             payload.eventType === 'UPDATE' &&
             payload.new &&
@@ -266,18 +258,16 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
           ) {
             const matchedFid = (payload.new as any).player_fid;
             const newMatchId = (payload.new as any).match_id as string;
-            console.log('[matchmaking] Player matched via realtime:', { matchedFid, newMatchId, myFid: currentPlayerRef.current?.fid });
 
-            // If THIS player was matched, navigate immediately
             if (matchedFid === currentPlayerRef.current?.fid) {
-              console.log('[matchmaking] Current player matched! Setting matchId:', newMatchId);
+              console.log('[matchmaking] Current player matched via realtime:', newMatchId);
               setMatchId(newMatchId);
               setIsMatchReady(true);
-              return; // No need to refresh queue
+              return;
             }
           }
 
-          // Refresh queue players for other changes (new joins, ready status)
+          // Refresh queue for other changes (new joins, ready status)
           await refreshQueuePlayers(tier);
         }
       )
@@ -299,19 +289,16 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
     setError(null);
     setSelectedTier(tier);
-
-    // Start countdown immediately (don't wait for database)
-    // This ensures countdown shows even if Supabase connection fails
     startCountdown();
 
     if (!isSupabaseAvailable()) {
       setError('Connection not ready. Please refresh the page.');
+      isJoiningRef.current = false;
       return;
     }
 
     try {
-      // Ensure player exists in players table (upsert)
-      // Cast to any to work around TypeScript's strict typing with Supabase
+      // Ensure player exists in players table
       const { error: playerError } = await (supabase as any)
         .from('players')
         .upsert({
@@ -327,14 +314,16 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         throw new Error(`Failed to register player: ${playerError.message}`);
       }
 
-      // Cancel any existing queue entries for this player
+      // Cancel ALL old queue entries for this player (waiting AND matched)
+      // This prevents stale entries from causing redirect to dead games
+      console.log('[matchmaking] Cleaning up old queue entries for fid:', player.fid);
       await (supabase as any)
         .from('match_queue')
         .update({ status: 'cancelled' })
         .eq('player_fid', player.fid)
-        .eq('status', 'waiting');
+        .in('status', ['waiting', 'matched']);
 
-      // Join queue
+      // Insert fresh queue entry
       const { data, error: queueError } = await (supabase as any)
         .from('match_queue')
         .insert({
@@ -350,6 +339,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       }
 
       queueEntryIdRef.current = data.id;
+      joinedAtRef.current = data.joined_at;
       setIsInQueue(true);
 
       // Subscribe to queue updates
@@ -357,7 +347,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       await refreshQueuePlayers(tier);
     } catch (err: any) {
       setError(err.message || 'Failed to join queue');
-      console.error('Join queue error:', err);
+      console.error('[matchmaking] Join queue error:', err);
       isJoiningRef.current = false;
     }
   }, [isInQueue, subscribeToQueue, refreshQueuePlayers, startCountdown]);
@@ -367,6 +357,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     if (!isInQueue) return;
 
     try {
+      // Cancel queue entry in database
       if (isSupabaseAvailable() && queueEntryIdRef.current) {
         await (supabase as any)
           .from('match_queue')
@@ -374,7 +365,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
           .eq('id', queueEntryIdRef.current);
       }
 
-      // Clean up
+      // Clean up subscriptions and timers
       if (isSupabaseAvailable() && channelRef.current) {
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -383,7 +374,6 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
-
       setIsInQueue(false);
       setQueuePlayers([]);
       setMatchId(undefined);
@@ -393,17 +383,27 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       setConnectionStatus('disconnected');
       setIsCurrentPlayerReady(false);
       queueEntryIdRef.current = null;
+      joinedAtRef.current = null;
       previousPlayerCountRef.current = 0;
       isJoiningRef.current = false;
       matchmakingTriggeredRef.current = false;
     } catch (err) {
-      console.error('Leave queue error:', err);
+      console.error('[matchmaking] Leave queue error:', err);
     }
   }, [isInQueue]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — cancel queue entry so we don't ghost
   useEffect(() => {
     return () => {
+      // Cancel queue entry in DB on unmount (best-effort)
+      if (isSupabaseAvailable() && queueEntryIdRef.current) {
+        (supabase as any)
+          .from('match_queue')
+          .update({ status: 'cancelled' })
+          .eq('id', queueEntryIdRef.current)
+          .then(() => console.log('[matchmaking] Queue entry cancelled on unmount'))
+          .catch(() => {}); // Best effort
+      }
       if (isSupabaseAvailable() && channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
@@ -416,53 +416,45 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   // Count ready players
   const readyPlayerCount = queuePlayers.filter(p => p.isReady).length;
 
-  // Polling fallback: check if current player has been matched
-  // This handles cases where realtime subscription misses the matched event
+  // Polling fallback — check if THIS SESSION's queue entry was matched
+  // Only look at entries created AFTER we joined (not old stale matches)
   useEffect(() => {
     if (!isInQueue || isMatchReady || !currentPlayerRef.current || !isSupabaseAvailable()) return;
+    if (!queueEntryIdRef.current) return;
+
+    const entryId = queueEntryIdRef.current;
 
     const pollInterval = setInterval(async () => {
-      if (isMatchReady) return; // Already matched, stop polling
+      if (isMatchReady) return;
 
+      // Check THIS specific queue entry (by ID) — not just any matched entry for this player
       const { data, error: pollError } = await (supabase as any)
         .from('match_queue')
         .select('match_id, status')
-        .eq('player_fid', currentPlayerRef.current?.fid)
-        .eq('tier', selectedTier)
-        .eq('status', 'matched')
-        .order('joined_at', { ascending: false })
-        .limit(1);
+        .eq('id', entryId)
+        .single();
 
-      if (pollError) {
-        console.error('[matchmaking] Poll error:', pollError);
-        return;
-      }
+      if (pollError) return;
 
-      if (data && data.length > 0 && data[0].match_id) {
-        console.log('[matchmaking] Match found via polling:', data[0].match_id);
-        setMatchId(data[0].match_id);
+      if (data?.status === 'matched' && data?.match_id) {
+        console.log('[matchmaking] Match found via polling:', data.match_id);
+        setMatchId(data.match_id);
         setIsMatchReady(true);
       }
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [isInQueue, isMatchReady, selectedTier]);
+  }, [isInQueue, isMatchReady]);
 
   // Trigger matchmaking when enough human players are ready
   useEffect(() => {
-    console.log('[matchmaking] Trigger check:', {
-      readyPlayerCount,
-      isCurrentPlayerReady,
-      matchmakingTriggered: matchmakingTriggeredRef.current,
-      isMatchReady,
-    });
     if (
       readyPlayerCount >= MIN_PLAYERS_TO_START &&
       isCurrentPlayerReady &&
       !matchmakingTriggeredRef.current &&
       !isMatchReady
     ) {
-      console.log('[matchmaking] Triggering matchmaking (primary)');
+      console.log('[matchmaking] Triggering matchmaking (primary):', { readyPlayerCount });
       matchmakingTriggeredRef.current = true;
       const readyPlayers = queuePlayers.filter(p => p.isReady);
       triggerMatchmaking(selectedTier, readyPlayers);
@@ -478,12 +470,28 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       !isMatchReady
     ) {
       console.log('[matchmaking] Triggering matchmaking (countdown fallback)');
-      matchmakingTriggeredRef.current = false; // Reset to allow retry
+      matchmakingTriggeredRef.current = false;
       const readyPlayers = queuePlayers.filter(p => p.isReady);
       matchmakingTriggeredRef.current = true;
       triggerMatchmaking(selectedTier, readyPlayers);
     }
   }, [countdown, readyPlayerCount, isCurrentPlayerReady, isMatchReady, queuePlayers, selectedTier, triggerMatchmaking]);
+
+  // Periodic retry: every 5s while waiting with ready players, retry matchmaking
+  useEffect(() => {
+    if (!isCurrentPlayerReady || isMatchReady || readyPlayerCount < MIN_PLAYERS_TO_START) return;
+
+    const retryInterval = setInterval(() => {
+      if (isMatchReady) return;
+      console.log('[matchmaking] Periodic retry matchmaking');
+      matchmakingTriggeredRef.current = false;
+      const readyPlayers = queuePlayers.filter(p => p.isReady);
+      matchmakingTriggeredRef.current = true;
+      triggerMatchmaking(selectedTier, readyPlayers);
+    }, 5000);
+
+    return () => clearInterval(retryInterval);
+  }, [isCurrentPlayerReady, isMatchReady, readyPlayerCount, queuePlayers, selectedTier, triggerMatchmaking]);
 
   return {
     isInQueue,
