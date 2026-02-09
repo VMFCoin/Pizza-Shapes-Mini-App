@@ -10,7 +10,10 @@
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.ts --network base",
     "deploy:testnet": "hardhat run scripts/deploy.ts --network baseSepolia",
-    "verify": "hardhat verify --network base"
+    "verify": "hardhat verify --network base",
+    "refund": "npx hardhat run scripts/refund-testers.js --network base",
+    "refund:confirm": "CONFIRM=YES npx hardhat run scripts/refund-testers.js --network base",
+    "scan-balances": "npx hardhat run scripts/scan-proxy-balances.js --network base"
   },
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.1",
