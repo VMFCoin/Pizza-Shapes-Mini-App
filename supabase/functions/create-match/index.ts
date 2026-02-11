@@ -208,10 +208,21 @@ serve(async (req) => {
       throw new Error(`Failed to create match: ${matchError.message}`);
     }
 
-    // Step 3: Create match players with assigned colors
-    const matchPlayersData = finalPlayerFids.map((fid: number, index: number) => ({
+    // Step 3: Initial dice roll-off to determine turn order
+    // Each player rolls 1-6, highest goes first. Ties are re-rolled.
+    const initialRolls: { fid: number; roll: number }[] = finalPlayerFids.map((fid: number) => ({
+      fid,
+      roll: Math.floor(Math.random() * 6) + 1,
+    }));
+    // Sort by roll descending (highest first). Ties broken by random (shuffle first)
+    initialRolls.sort((a, b) => b.roll - a.roll);
+
+    console.log('[create-match] Initial roll-off:', initialRolls);
+
+    // Create match players with turn order based on roll-off
+    const matchPlayersData = initialRolls.map((entry, index: number) => ({
       match_id: match.id,
-      player_fid: fid,
+      player_fid: entry.fid,
       color: PLAYER_COLORS[index % PLAYER_COLORS.length],
       player_index: index,
       is_bot: false,
@@ -278,12 +289,13 @@ serve(async (req) => {
       console.error('[create-match] Failed to activate match:', activateError);
     }
 
-    console.log('[create-match] Match created successfully:', match.id, 'players:', finalPlayerFids);
+    console.log('[create-match] Match created successfully:', match.id, 'players:', initialRolls.map(r => r.fid));
     return new Response(
       JSON.stringify({
         matchId: match.id,
         gridSize: tierConfig.gridSize,
         playerCount: finalPlayerFids.length,
+        initialRolls, // { fid, roll }[] sorted by roll desc — first player goes first
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

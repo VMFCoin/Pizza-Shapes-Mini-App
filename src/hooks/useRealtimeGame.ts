@@ -181,9 +181,9 @@ export function useRealtimeGame(
         edges,
         possibleSlices,
         capturedSlices: (gs?.captured_slices as PizzaSlice[]) || [],
-        diceRoll: gs?.dice_roll || null,
-        movesRemaining: gs?.moves_remaining || 0,
-        turnNumber: matchData.turn_number || 1,
+        diceRoll: gs?.dice_roll ?? null,
+        movesRemaining: gs?.moves_remaining ?? 0,
+        turnNumber: matchData.turn_number ?? 1,
         gameOver: matchData.status === 'completed',
         winner: matchData.winner_fid ? `player_${matchData.winner_fid}` : null,
       };
@@ -369,20 +369,20 @@ export function useRealtimeGame(
     const currentState = gameStateRef.current;
     if (!matchId || !currentState || !currentPlayerFid || currentState.gameOver) {
       console.log(`[rollDice] BAIL: matchId=${matchId}, fid=${currentPlayerFid}, gameOver=${currentState?.gameOver}`);
-      return 0;
+      return -1;
     }
 
     // Check it's our turn using ref
     const currentP = currentState.players[currentState.currentPlayerIndex];
     if (currentP?.fid !== currentPlayerFid) {
       console.log(`[rollDice] BAIL: not my turn. currentP.fid=${currentP?.fid}, myFid=${currentPlayerFid}`);
-      return 0;
+      return -1;
     }
 
     // Prevent rolling if already rolled this turn (moves allocated or dice already shown)
     if (currentState.movesRemaining > 0 || currentState.diceRoll !== null) {
       console.log(`[rollDice] Already rolled: moves=${currentState.movesRemaining}, dice=${currentState.diceRoll}`);
-      return currentState.diceRoll || 0;
+      return currentState.diceRoll ?? -1;
     }
 
     try {
@@ -409,7 +409,7 @@ export function useRealtimeGame(
           return { ...prev, gameOver: true };
         });
         setGamePhase('gameOver');
-        return 0;
+        return -1;
       }
 
       // Optimistically update diceRoll so the dice animation shows the final value.
@@ -428,7 +428,7 @@ export function useRealtimeGame(
       return data.diceRoll;
     } catch (err: any) {
       setError(err.message || 'Failed to roll dice');
-      return 0;
+      return -1;
     }
   }, [matchId, currentPlayerFid]);
 
@@ -727,9 +727,8 @@ export function useRealtimeGame(
     };
   }, [matchId, currentPlayerFid]);
 
-  // 60-second turn timer — resets on each new turn, auto-ends when expired.
-  // Uses `isMyTurn` (derived from gameState + currentPlayerFid) so it starts
-  // correctly even if the Farcaster SDK loads after the game state.
+  // 60-second turn timer — visible to ALL players, resets on each turn change.
+  // Only the active player's client auto-ends the turn when time expires.
   useEffect(() => {
     // Clear previous timer
     if (turnTimerRef.current) {
@@ -737,37 +736,33 @@ export function useRealtimeGame(
       turnTimerRef.current = null;
     }
 
-    if (!gameState || gameState.gameOver || !matchId || !currentPlayerFid) {
+    if (!gameState || gameState.gameOver || !matchId) {
       setTurnTimeRemaining(null);
       return;
     }
 
-    // Only run the countdown when it's the current user's turn
-    if (!isMyTurn) {
-      setTurnTimeRemaining(null);
-      return;
-    }
-
-    // Don't tick timer for bots (shouldn't be isMyTurn, but guard just in case)
+    // Don't show timer for bot turns
     const currentP = gameState.players[gameState.currentPlayerIndex];
     if (currentP?.isBot) {
       setTurnTimeRemaining(null);
       return;
     }
 
-    // Start countdown
+    // Start countdown — visible to everyone
     console.log(`[timer] Starting 60s countdown. isMyTurn=${isMyTurn}, playerIndex=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}`);
     setTurnTimeRemaining(TURN_TIME_LIMIT);
 
     turnTimerRef.current = setInterval(() => {
       setTurnTimeRemaining(prev => {
         if (prev === null || prev <= 1) {
-          // Time's up — auto-end turn
           if (turnTimerRef.current) {
             clearInterval(turnTimerRef.current);
             turnTimerRef.current = null;
           }
-          endTurn();
+          // Only the active player's client sends endTurn
+          if (isMyTurn) {
+            endTurn();
+          }
           return 0;
         }
         return prev - 1;
@@ -780,7 +775,7 @@ export function useRealtimeGame(
         turnTimerRef.current = null;
       }
     };
-  }, [isMyTurn, gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, currentPlayerFid, endTurn]);
+  }, [isMyTurn, gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, endTurn]);
 
   // Auto-trigger bot turns when current player is a bot (CLIENT FALLBACK).
   // The server-side inline bot in validate-move is the primary mechanism.

@@ -92,14 +92,23 @@ serve(async (req) => {
       throw new Error(`Failed to create match: ${matchError?.message}`);
     }
 
-    // Create match players — human first, then bot
-    const playerFids = [humanFid, BOT_FID];
-    const matchPlayersData = playerFids.map((fid: number, index: number) => ({
+    // Initial dice roll-off to determine who goes first
+    const humanRoll = Math.floor(Math.random() * 6) + 1;
+    const botRoll = Math.floor(Math.random() * 6) + 1;
+    console.log(`[add-bot] Roll-off: human=${humanRoll}, bot=${botRoll}`);
+
+    // Higher roll goes first (index 0). Human wins ties.
+    const humanFirst = humanRoll >= botRoll;
+    const orderedPlayers = humanFirst
+      ? [{ fid: humanFid, isBot: false }, { fid: BOT_FID, isBot: true }]
+      : [{ fid: BOT_FID, isBot: true }, { fid: humanFid, isBot: false }];
+
+    const matchPlayersData = orderedPlayers.map((p, index: number) => ({
       match_id: match.id,
-      player_fid: fid,
+      player_fid: p.fid,
       color: PLAYER_COLORS[index % PLAYER_COLORS.length],
       player_index: index,
-      is_bot: fid === BOT_FID,
+      is_bot: p.isBot,
       is_connected: true,
     }));
 

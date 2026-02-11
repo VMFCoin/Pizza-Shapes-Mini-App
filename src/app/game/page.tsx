@@ -109,8 +109,9 @@ function GameContent() {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Capture the result so realtime updates can't erase it during reveal
+    // -1 means no roll happened (bail-out), so don't display it
     const result = await rollPromise;
-    diceResultRef.current = result;
+    diceResultRef.current = result > 0 ? result : null;
 
     // Stop the rolling animation — show the dice result briefly
     setIsRolling(false);
@@ -239,25 +240,6 @@ function GameContent() {
               <span className="text-stone-400 text-xs">Turn </span>
               <span className="font-bold text-game-light">{gameState.turnNumber}</span>
             </div>
-            {turnTimeRemaining !== null && (
-              <div
-                className="px-3 py-1.5 rounded-lg"
-                style={{
-                  background: turnTimeRemaining <= 10
-                    ? 'linear-gradient(180deg, #FF4444 0%, #CC2222 100%)'
-                    : turnTimeRemaining <= 20
-                    ? 'linear-gradient(180deg, #FF8C5A 0%, #FF6B35 100%)'
-                    : 'linear-gradient(180deg, #3D3835 0%, #292524 100%)',
-                  boxShadow: turnTimeRemaining <= 10
-                    ? '0 2px 0 0 #991111'
-                    : '0 2px 0 0 #1C1917, inset 0 1px 0 rgba(255,255,255,0.05)',
-                }}
-              >
-                <span className={`font-bold text-sm ${turnTimeRemaining <= 10 ? 'text-white' : 'text-game-light'}`}>
-                  {turnTimeRemaining}s
-                </span>
-              </div>
-            )}
           </div>
           <WalletDisplayCompact balance={balance} onViewToken={() => viewToken()} />
         </div>
@@ -277,28 +259,65 @@ function GameContent() {
 
       {/* Main game area */}
       <div className="pt-16 pb-48 px-4 flex flex-col items-center justify-center min-h-screen">
-        {/* Current turn indicator - Keycap pill style */}
-        <motion.div
-          className="mb-4 px-5 py-2 rounded-xl"
-          style={{ 
-            background: `linear-gradient(180deg, ${currentPlayer?.color}40 0%, ${currentPlayer?.color}20 100%)`,
-            border: `1px solid ${currentPlayer?.color}50`,
-            boxShadow: `0 2px 8px ${currentPlayer?.color}30`,
-          }}
-          animate={{ 
-            scale: [1, 1.02, 1],
-            boxShadow: [
-              `0 2px 8px ${currentPlayer?.color}30`,
-              `0 4px 16px ${currentPlayer?.color}50`,
-              `0 2px 8px ${currentPlayer?.color}30`,
-            ]
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <p className="text-sm font-bold" style={{ color: currentPlayer?.color }}>
-            {isMyTurn ? "Your Turn!" : `${currentPlayer?.displayName}'s Turn`}
-          </p>
-        </motion.div>
+        {/* Turn indicator + Timer — visible to ALL players */}
+        <div className="mb-4 flex flex-col items-center gap-2">
+          {/* Turn timer — prominent, above grid */}
+          {turnTimeRemaining !== null && (
+            <motion.div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{
+                background: turnTimeRemaining <= 10
+                  ? 'linear-gradient(180deg, #FF4444 0%, #CC2222 100%)'
+                  : turnTimeRemaining <= 20
+                  ? 'linear-gradient(180deg, #FF8C5A 0%, #FF6B35 100%)'
+                  : 'linear-gradient(180deg, #3D3835 0%, #292524 100%)',
+                boxShadow: turnTimeRemaining <= 10
+                  ? '0 3px 0 0 #991111, 0 4px 16px rgba(255, 68, 68, 0.4)'
+                  : turnTimeRemaining <= 20
+                  ? '0 3px 0 0 #CC5429, 0 4px 12px rgba(255, 107, 53, 0.3)'
+                  : '0 2px 0 0 #1C1917, inset 0 1px 0 rgba(255,255,255,0.05)',
+              }}
+              animate={turnTimeRemaining <= 10 ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ duration: 0.5, repeat: Infinity }}
+              key={turnTimeRemaining}
+              initial={{ scale: 1.1, opacity: 0.8 }}
+            >
+              <span className="text-lg">{"⏱️"}</span>
+              <span
+                className="font-bold text-2xl tabular-nums"
+                style={{
+                  color: turnTimeRemaining <= 10 ? '#FFF' : turnTimeRemaining <= 20 ? '#FFF' : '#E7E5E4',
+                  fontFamily: 'var(--font-lilita), cursive',
+                }}
+              >
+                {turnTimeRemaining}s
+              </span>
+            </motion.div>
+          )}
+
+          {/* Current turn player indicator */}
+          <motion.div
+            className="px-5 py-2 rounded-xl"
+            style={{
+              background: `linear-gradient(180deg, ${currentPlayer?.color}40 0%, ${currentPlayer?.color}20 100%)`,
+              border: `1px solid ${currentPlayer?.color}50`,
+              boxShadow: `0 2px 8px ${currentPlayer?.color}30`,
+            }}
+            animate={{
+              scale: [1, 1.02, 1],
+              boxShadow: [
+                `0 2px 8px ${currentPlayer?.color}30`,
+                `0 4px 16px ${currentPlayer?.color}50`,
+                `0 2px 8px ${currentPlayer?.color}30`,
+              ]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <p className="text-sm font-bold" style={{ color: currentPlayer?.color }}>
+              {isMyTurn ? "Your Turn!" : `${currentPlayer?.displayName}'s Turn`}
+            </p>
+          </motion.div>
+        </div>
 
         {/* Game grid */}
         <motion.div

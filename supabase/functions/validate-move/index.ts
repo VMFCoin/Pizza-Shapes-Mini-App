@@ -161,7 +161,7 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
       .eq('id', match.id);
 
     return {
-      diceRoll: 0,
+      diceRoll: null,
       movesRemaining: 0,
       turnSkipped: false,
       availableMoves: 0,
