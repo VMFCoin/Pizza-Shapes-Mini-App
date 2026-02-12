@@ -73,11 +73,19 @@ function GameContent() {
   }, [isGameOver, winner, matchId, router]);
 
   // Auto-end turn when no moves remaining (and in drawing phase)
-  // Use 1500ms delay to allow server realtime updates (e.g. extra turn from capture) to arrive first
+  // Use 1500ms delay to allow server realtime updates (e.g. extra turn from capture) to arrive first.
+  // Capture turnNumber at schedule time so the timeout only fires if it's still the same turn.
+  const turnNumberRef = useRef(gameState?.turnNumber ?? 0);
+  turnNumberRef.current = gameState?.turnNumber ?? 0;
+
   useEffect(() => {
     if (gameState && gamePhase === 'drawing' && gameState.movesRemaining === 0 && !isGameOver && isMyTurn) {
+      const scheduledTurn = gameState.turnNumber;
       const timer = setTimeout(() => {
-        endTurn();
+        // Only end turn if it's still the same turn (prevents stale timeout from ending a new turn)
+        if (turnNumberRef.current === scheduledTurn) {
+          endTurn();
+        }
       }, 1500);
       return () => clearTimeout(timer);
     }

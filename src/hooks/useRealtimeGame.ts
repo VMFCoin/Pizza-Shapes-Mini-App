@@ -69,6 +69,10 @@ export function useRealtimeGame(
   // Ref to always read latest game state in async callbacks (avoids stale closures)
   const gameStateRef = useRef<GameState | null>(null);
   gameStateRef.current = gameState;
+  // Ref for endTurn so the timer effect can call it without re-subscribing
+  const endTurnRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  // Ref for isMyTurn so the timer effect reads the latest value without re-subscribing
+  const isMyTurnRef = useRef(false);
 
   // Derive current player from game state
   const currentPlayer = useMemo(() => {
@@ -80,6 +84,7 @@ export function useRealtimeGame(
   const isMyTurn = useMemo(() => {
     return currentPlayer?.fid === currentPlayerFid;
   }, [currentPlayer, currentPlayerFid]);
+  isMyTurnRef.current = isMyTurn;
 
   const isGameOver = gameState?.gameOver ?? false;
 
@@ -222,7 +227,9 @@ export function useRealtimeGame(
         setGamePhase(prev => {
           if (prev === 'capturing') return prev; // protect capture animation
           if (newState.moves_remaining > 0) return 'drawing';
-          if (newState.dice_roll === null) return 'rolling';
+          if (newState.dice_roll === null) return 'rolling'; // new turn or reset
+          // dice_roll is set but moves_remaining is 0 — turn is ending
+          if (newState.moves_remaining === 0) return 'rolling';
           return prev;
         });
       }
@@ -489,6 +496,12 @@ export function useRealtimeGame(
           if (!prev) return prev;
           return { ...prev, movesRemaining: prev.movesRemaining + 1 };
         });
+        // "Not your turn" is a race condition, not a real error — silently rollback
+        const msg = invokeError.message || '';
+        if (msg.includes('Not your turn') || msg.includes('not your turn')) {
+          console.warn(`[drawEdge] Server says not our turn — rolled back optimistic update`);
+          return { captured: [], extraTurn: false };
+        }
         throw new Error(invokeError.message);
       }
 
@@ -612,6 +625,9 @@ export function useRealtimeGame(
     }
   }, [matchId, currentPlayerFid]);
 
+  // Keep ref in sync so timer can call endTurn without being a dependency
+  endTurnRef.current = endTurn;
+
   // Check if edge can be drawn
   const canDrawEdge = useCallback((edgeId: EdgeID): boolean => {
     if (!gameState || gameState.gameOver) return false;
@@ -729,6 +745,8 @@ export function useRealtimeGame(
 
   // 60-second turn timer — visible to ALL players, resets on each turn change.
   // Only the active player's client auto-ends the turn when time expires.
+  // IMPORTANT: deps are only turn identity (currentPlayerIndex + turnNumber) and matchId/gameOver.
+  // endTurn and isMyTurn are accessed via refs to avoid timer restart from function reference changes.
   useEffect(() => {
     // Clear previous timer
     if (turnTimerRef.current) {
@@ -749,7 +767,7 @@ export function useRealtimeGame(
     }
 
     // Start countdown — visible to everyone
-    console.log(`[timer] Starting 60s countdown. isMyTurn=${isMyTurn}, playerIndex=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}`);
+    console.log(`[timer] Starting 60s countdown. playerIndex=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}`);
     setTurnTimeRemaining(TURN_TIME_LIMIT);
 
     turnTimerRef.current = setInterval(() => {
@@ -759,9 +777,9 @@ export function useRealtimeGame(
             clearInterval(turnTimerRef.current);
             turnTimerRef.current = null;
           }
-          // Only the active player's client sends endTurn
-          if (isMyTurn) {
-            endTurn();
+          // Only the active player's client sends endTurn (read from ref, not closure)
+          if (isMyTurnRef.current) {
+            endTurnRef.current();
           }
           return 0;
         }
@@ -775,7 +793,10 @@ export function useRealtimeGame(
         turnTimerRef.current = null;
       }
     };
-  }, [isMyTurn, gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, endTurn]);
+    // Only restart timer when the turn actually changes (player index or turn number),
+    // NOT when endTurn/isMyTurn function references change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId]);
 
   // Auto-trigger bot turns when current player is a bot (CLIENT FALLBACK).
   // The server-side inline bot in validate-move is the primary mechanism.
