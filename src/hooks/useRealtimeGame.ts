@@ -665,6 +665,38 @@ export function useRealtimeGame(
   // Keep ref in sync so timer can call endTurn without being a dependency
   endTurnRef.current = endTurn;
 
+  // Force-end a stale turn (called by non-active players after timeout + grace period)
+  // Sends 'force_end_turn' which the server only accepts if turn_started_at is 65+ seconds ago
+  const forceEndTurn = useCallback(async (): Promise<void> => {
+    if (!matchId || !currentPlayerFid) return;
+    const currentState = gameStateRef.current;
+    if (!currentState || currentState.gameOver) return;
+
+    console.log(`[forceEndTurn] Forcing end of stale turn (player ${currentState.currentPlayerIndex})`);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('validate-move', {
+        body: {
+          matchId,
+          playerFid: currentPlayerFid,
+          moveType: 'force_end_turn',
+          moveData: {},
+        },
+      });
+
+      console.log(`[forceEndTurn] Response:`, JSON.stringify(data), `error:`, invokeError);
+
+      if (invokeError) {
+        console.warn(`[forceEndTurn] Server rejected:`, invokeError.message);
+        // Not an error worth surfacing — the turn may have already advanced via another mechanism
+      }
+    } catch (err) {
+      console.error('[forceEndTurn] Failed:', err);
+    }
+  }, [matchId, currentPlayerFid]);
+
+  const forceEndTurnRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  forceEndTurnRef.current = forceEndTurn;
+
   // Check if edge can be drawn
   const canDrawEdge = useCallback((edgeId: EdgeID): boolean => {
     if (!gameState || gameState.gameOver) return false;
@@ -814,9 +846,20 @@ export function useRealtimeGame(
             clearInterval(turnTimerRef.current);
             turnTimerRef.current = null;
           }
-          // Only the active player's client sends endTurn (read from ref, not closure)
+          // Active player's client sends endTurn immediately at 0
           if (isMyTurnRef.current) {
             endTurnRef.current();
+          } else {
+            // Non-active player's client: wait 5s then force-end the stale turn
+            // This handles the case where the active player's client is unresponsive
+            setTimeout(() => {
+              // Re-check: turn may have already advanced via realtime
+              const latestState = gameStateRef.current;
+              if (latestState && !latestState.gameOver) {
+                console.log(`[timer] 5s grace expired, forcing end of stale turn`);
+                forceEndTurnRef.current();
+              }
+            }, 5000);
           }
           return 0;
         }

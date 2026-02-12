@@ -1,8 +1,8 @@
-# Pizza Shapes Payment & Fee Distribution System
+# Pizza Dots Payment & Fee Distribution System
 
 ## Overview
 
-This document describes the complete payment flow for the Pizza Shapes Mini App, including wallet connection, entry fee payments, prize distribution, and fund management.
+This document describes the complete payment flow for the Pizza Dots Mini App, including wallet connection, entry fee payments, prize distribution, and fund management.
 
 ## Fee Distribution Breakdown
 

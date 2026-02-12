@@ -347,6 +347,7 @@ function GameContent() {
             onEdgeClick={handleEdgeClick}
             canDrawEdge={canDrawEdge}
             gridSize={gridSize}
+            canInteract={isMyTurn && gameState.movesRemaining > 0 && (gamePhase === 'drawing' || gamePhase === 'capturing')}
           />
 
           {/* Moves remaining indicator - Keycap badge */}

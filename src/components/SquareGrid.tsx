@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Node, Edge, PizzaSlice, Player, NodeID } from '@/types';
 import { getEdgeCoordinates, getSlicePath, getSliceCenter } from '@/lib/gridUtils';
@@ -14,6 +14,8 @@ interface SquareGridProps {
   onEdgeClick: (edgeId: string) => void;
   canDrawEdge: (edgeId: string) => boolean;
   gridSize: number;
+  /** When false, node clicks are ignored (e.g. rolling phase, not your turn) */
+  canInteract?: boolean;
 }
 
 export function SquareGrid({
@@ -25,6 +27,7 @@ export function SquareGrid({
   onEdgeClick,
   canDrawEdge,
   gridSize,
+  canInteract = true,
 }: SquareGridProps) {
   const [selectedNode, setSelectedNode] = useState<NodeID | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
@@ -45,8 +48,18 @@ export function SquareGrid({
   // Current player color
   const currentPlayerColor = getPlayerColor(currentPlayerId);
 
+  // Clear selected node when interaction is disabled (e.g. phase changes to rolling)
+  useEffect(() => {
+    if (!canInteract) {
+      setSelectedNode(null);
+    }
+  }, [canInteract]);
+
   // Handle node click
   const handleNodeClick = useCallback((nodeId: NodeID) => {
+    // Block interaction when not allowed (rolling phase, not your turn, etc.)
+    if (!canInteract) return;
+
     if (selectedNode === null) {
       setSelectedNode(nodeId);
     } else if (selectedNode === nodeId) {
@@ -66,7 +79,7 @@ export function SquareGrid({
         setSelectedNode(nodeId);
       }
     }
-  }, [selectedNode, edges, canDrawEdge, onEdgeClick]);
+  }, [canInteract, selectedNode, edges, canDrawEdge, onEdgeClick]);
 
   // Render captured slices
   const renderedSlices = useMemo(() => {

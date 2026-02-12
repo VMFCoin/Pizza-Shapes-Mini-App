@@ -110,7 +110,44 @@ serve(async (req) => {
     );
     const currentPlayer = sortedPlayers[match.current_player_index];
 
-    // Validate it's the player's turn
+    // force_end_turn: any match participant can force-end a stale turn (65+ seconds idle)
+    if (moveType === 'force_end_turn') {
+      const callerInMatch = sortedPlayers.some((p: any) => p.player_fid === playerFid);
+      if (!callerInMatch) {
+        return new Response(
+          JSON.stringify({ error: 'Player not in this match' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const turnAge = (Date.now() - new Date(match.turn_started_at).getTime()) / 1000;
+      if (turnAge < 65) {
+        return new Response(
+          JSON.stringify({ error: 'Turn is not stale yet', turnAge }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log(`[validate-move] force_end_turn by fid=${playerFid}, turnAge=${turnAge}s, advancing from player ${match.current_player_index}`);
+      const result = await handleEndTurn(supabase, match, gameState, readVersion);
+      if (result === null) {
+        return new Response(
+          JSON.stringify(VERSION_CONFLICT),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      await supabase.from('move_history').insert({
+        match_id: matchId,
+        player_fid: currentPlayer.player_fid,
+        turn_number: match.turn_number,
+        move_type: 'turn_timeout',
+        move_data: { forced_by: playerFid, turn_age: Math.round(turnAge) },
+      });
+      return new Response(
+        JSON.stringify(result),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate it's the player's turn (for normal moves)
     if (currentPlayer.player_fid !== playerFid) {
       return new Response(
         JSON.stringify({ error: 'Not your turn' }),
