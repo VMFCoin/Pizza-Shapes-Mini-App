@@ -21,13 +21,15 @@ const PRIZE_DISTRIBUTION = {
   charity: 300,      // 3%
 };
 
-// Settlement ABI (minimal for settleMatch + settleBotMatch)
+// Settlement ABI (minimal for settleMatch + settleBotMatch + settleTiedMatch)
 const SETTLEMENT_ABI = [
   'function settleMatch(bytes32 matchId, address winner, address[] players, uint256[] slices) external',
   'function settleBotMatch(bytes32 matchId, address[] players, uint256[] slices) external',
+  'function settleTiedMatch(bytes32 matchId, address[] winners, address[] players, uint256[] slices) external',
   'function getMatch(bytes32 matchId) view returns (tuple(bytes32 matchId, address[] players, uint256 entryAmount, uint256 totalPool, bool settled, uint256 createdAt, uint8 tier))',
   'event MatchSettled(bytes32 indexed matchId, address indexed winner, uint256 winnerPrize, uint256 totalPool)',
   'event BotMatchSettled(bytes32 indexed matchId, uint256 freeRollAmount, uint256 burnedToPizza, uint256 totalPool)',
+  'event TiedMatchSettled(bytes32 indexed matchId, address[] winners, uint256 perWinnerPrize, uint256 totalPool)',
 ];
 
 // CORS headers
@@ -38,7 +40,8 @@ const corsHeaders = {
 
 interface SettleMatchRequest {
   matchId: string;
-  winner: string;
+  winner: string;          // Single winner address (empty/null for ties)
+  winners?: string[];      // Co-winner addresses for tied matches
   players: string[];
   scores: Record<string, number>;
 }
@@ -71,12 +74,19 @@ serve(async (req: Request) => {
 
     // Parse request
     const body: SettleMatchRequest = await req.json();
-    const { matchId, winner, players, scores } = body;
+    const { matchId, winner, winners, players, scores } = body;
 
-    // Validate input
-    if (!matchId || !winner || !players || !scores) {
+    // Validate input — need either a single winner or multiple winners (tie)
+    const isTiedMatch = Array.isArray(winners) && winners.length >= 2;
+    if (!matchId || !players || !scores) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!isTiedMatch && !winner) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing winner or winners field' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -136,11 +146,21 @@ serve(async (req: Request) => {
       console.log('Match not found on-chain, proceeding with settlement');
     }
 
-    // Determine if bot won — route to bot-aware settlement path
-    const isBotWinner = winner.toLowerCase() === BOT_ADDRESS.toLowerCase();
-
+    // Route to the appropriate settlement function
     let tx;
-    if (isBotWinner) {
+    if (isTiedMatch) {
+      // Tied match: 77% winner portion split equally among co-winners
+      console.log(`Settling tied match with ${winners!.length} co-winners`);
+      tx = await settlement.settleTiedMatch(
+        matchIdBytes,
+        winners,
+        players,
+        slicesArray,
+        {
+          gasLimit: 700000,
+        }
+      );
+    } else if (winner.toLowerCase() === BOT_ADDRESS.toLowerCase()) {
       // Bot won: 77% winner portion split 50/50 between free roll vault and PIZZA burn
       tx = await settlement.settleBotMatch(
         matchIdBytes,
@@ -172,6 +192,7 @@ serve(async (req: Request) => {
 
     // Parse settlement event for prize amounts
     let winnerPrize = '0';
+    let perWinnerPrize = '0';
     let totalPool = '0';
 
     for (const log of receipt.logs) {
@@ -184,6 +205,12 @@ serve(async (req: Request) => {
         if (parsed?.name === 'MatchSettled') {
           winnerPrize = ethers.formatEther(parsed.args.winnerPrize);
           totalPool = ethers.formatEther(parsed.args.totalPool);
+        }
+        if (parsed?.name === 'TiedMatchSettled') {
+          perWinnerPrize = ethers.formatEther(parsed.args.perWinnerPrize);
+          totalPool = ethers.formatEther(parsed.args.totalPool);
+          // For tied matches, winnerPrize = per-winner share
+          winnerPrize = perWinnerPrize;
         }
       } catch {
         // Not our event, skip
@@ -205,11 +232,19 @@ serve(async (req: Request) => {
       .from('matches')
       .update({
         status: 'completed',
-        winner_id: winner,
+        winner_id: isTiedMatch ? null : winner,
         settled_at: new Date().toISOString(),
         settlement_tx: receipt.hash,
       })
       .eq('id', matchId);
+
+    // Build a set of winner addresses for quick lookup
+    const winnerSet = new Set<string>();
+    if (isTiedMatch) {
+      for (const w of winners!) winnerSet.add(w.toLowerCase());
+    } else {
+      winnerSet.add(winner.toLowerCase());
+    }
 
     // Update player stats in database (skip bot players — they don't appear on leaderboard)
     for (const player of players) {
@@ -217,21 +252,22 @@ serve(async (req: Request) => {
         continue; // Bot is excluded from stats and leaderboard
       }
 
-      const isWinner = player.toLowerCase() === winner.toLowerCase();
+      const playerIsWinner = winnerSet.has(player.toLowerCase());
       const slices = scores[player] || 0;
+      const playerEarnings = playerIsWinner ? (isTiedMatch ? perWinnerPrize : winnerPrize) : '0';
 
       await supabase.rpc('update_player_stats', {
         p_address: player,
-        p_is_winner: isWinner,
+        p_is_winner: playerIsWinner,
         p_slices: slices,
-        p_earnings: isWinner ? winnerPrize : '0',
+        p_earnings: playerEarnings,
       });
     }
 
     const response: SettleMatchResponse = {
       success: true,
       transactionHash: receipt.hash,
-      winnerPrize,
+      winnerPrize: isTiedMatch ? perWinnerPrize : winnerPrize,
       distribution,
     };
 

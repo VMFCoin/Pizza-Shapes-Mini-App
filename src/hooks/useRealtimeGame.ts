@@ -579,10 +579,16 @@ export function useRealtimeGame(
       return;
     }
 
+    // Save pre-optimistic state for rollback on error
+    const prevIndex = currentState.currentPlayerIndex;
+    const prevTurnNumber = currentState.turnNumber;
+    const prevDiceRoll = currentState.diceRoll;
+    const prevMovesRemaining = currentState.movesRemaining;
+
     // Optimistically advance turn locally so the UI updates immediately
-    const nextPlayerIndex = (currentState.currentPlayerIndex + 1) % currentState.players.length;
+    const nextPlayerIndex = (prevIndex + 1) % currentState.players.length;
     const nextPlayer = currentState.players[nextPlayerIndex];
-    console.log(`[endTurn] Advancing to player ${nextPlayerIndex} (${nextPlayer?.displayName}, isBot=${nextPlayer?.isBot}), turn ${currentState.turnNumber + 1}`);
+    console.log(`[endTurn] Advancing to player ${nextPlayerIndex} (${nextPlayer?.displayName}, isBot=${nextPlayer?.isBot}), turn ${prevTurnNumber + 1}`);
 
     setGameState(prev => {
       if (!prev) return prev;
@@ -610,9 +616,14 @@ export function useRealtimeGame(
       console.log(`[endTurn] Response:`, JSON.stringify(data), `error:`, invokeError);
 
       if (invokeError || data?.error === 'version_conflict') {
+        // Rollback optimistic state
+        setGameState(prev => {
+          if (!prev) return prev;
+          return { ...prev, currentPlayerIndex: prevIndex, turnNumber: prevTurnNumber, diceRoll: prevDiceRoll, movesRemaining: prevMovesRemaining };
+        });
         const msg = invokeError?.message || data?.error || '';
         if (msg.includes('version_conflict')) {
-          console.warn(`[endTurn] Version conflict — re-fetching game state`);
+          console.warn(`[endTurn] Version conflict — rolling back and re-fetching`);
           await fetchGameStateRef.current();
           return;
         }
@@ -630,7 +641,7 @@ export function useRealtimeGame(
       // Pre-set the ref so the client-side useEffect fallback doesn't
       // double-trigger. Clear it after 5s as safety fallback.
       if (nextPlayer?.isBot) {
-        const turnKey = `${nextPlayerIndex}-${currentState.turnNumber + 1}`;
+        const turnKey = `${nextPlayerIndex}-${prevTurnNumber + 1}`;
         console.log(`[endTurn] Setting botTurnTriggeredRef=${turnKey}`);
         botTurnTriggeredRef.current = turnKey;
         setTimeout(() => {
@@ -641,7 +652,12 @@ export function useRealtimeGame(
         }, 5000);
       }
     } catch (err: any) {
-      console.error(`[endTurn] ERROR:`, err);
+      // Rollback optimistic state on any error
+      setGameState(prev => {
+        if (!prev) return prev;
+        return { ...prev, currentPlayerIndex: prevIndex, turnNumber: prevTurnNumber, diceRoll: prevDiceRoll, movesRemaining: prevMovesRemaining };
+      });
+      console.error(`[endTurn] ERROR, rolling back:`, err);
       setError(err.message || 'Failed to end turn');
     }
   }, [matchId, currentPlayerFid]);

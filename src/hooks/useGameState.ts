@@ -168,7 +168,7 @@ export function useGameState(): UseGameStateReturn {
 
         // Check game end condition
         const gameEnded = !hasRemainingSlices(updatedPossibleSlices, updatedEdges);
-        const winnerId = gameEnded
+        const winnerResult = gameEnded
           ? determineWinner(prev.players, newCapturedSlices)
           : null;
 
@@ -179,7 +179,7 @@ export function useGameState(): UseGameStateReturn {
           capturedSlices: newCapturedSlices,
           movesRemaining: extraTurn ? newMovesRemaining + 1 : newMovesRemaining,
           gameOver: gameEnded,
-          winner: winnerId,
+          winner: winnerResult?.winnerId ?? null,
         };
       });
 
@@ -207,11 +207,11 @@ export function useGameState(): UseGameStateReturn {
 
       // Check game end condition
       if (!hasRemainingSlices(prev.possibleSlices, prev.edges)) {
-        const winnerId = determineWinner(prev.players, prev.capturedSlices);
+        const winnerResult = determineWinner(prev.players, prev.capturedSlices);
         return {
           ...prev,
           gameOver: true,
-          winner: winnerId,
+          winner: winnerResult.winnerId,
           movesRemaining: 0,
           diceRoll: null,
         };

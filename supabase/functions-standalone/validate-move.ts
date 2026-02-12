@@ -43,14 +43,20 @@ function getPlayerScore(playerId: string, capturedSlices: PizzaSlice[]): number 
   return capturedSlices.filter(s => s.capturedBy === playerId).length;
 }
 
-function determineWinner(players: { id: string }[], capturedSlices: PizzaSlice[]): string | null {
-  if (players.length === 0) return null;
-  let maxScore = -1, winner: string | null = null;
-  for (const player of players) {
-    const score = getPlayerScore(player.id, capturedSlices);
-    if (score > maxScore) { maxScore = score; winner = player.id; }
-  }
-  return winner;
+interface WinnerResult {
+  winnerId: string | null;
+  isTied: boolean;
+  tiedPlayerIds: string[];
+  maxScore: number;
+}
+
+function determineWinner(players: { id: string }[], capturedSlices: PizzaSlice[]): WinnerResult {
+  if (players.length === 0) return { winnerId: null, isTied: false, tiedPlayerIds: [], maxScore: 0 };
+  const scores = players.map(p => ({ id: p.id, score: getPlayerScore(p.id, capturedSlices) }));
+  const maxScore = Math.max(...scores.map(s => s.score));
+  const topPlayers = scores.filter(s => s.score === maxScore);
+  if (topPlayers.length === 1) return { winnerId: topPlayers[0].id, isTied: false, tiedPlayerIds: [], maxScore };
+  return { winnerId: null, isTied: true, tiedPlayerIds: topPlayers.map(p => p.id), maxScore };
 }
 
 // ============ MAIN FUNCTION ============
@@ -151,8 +157,8 @@ serve(async (req) => {
 
       if (gameEnded) {
         const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
-        const winnerId = determineWinner(players, newCapturedSlices);
-        const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+        const winnerResult = determineWinner(players, newCapturedSlices);
+        const winnerFid = winnerResult.winnerId ? parseInt(winnerResult.winnerId.replace('player_', '')) : null;
         await supabase.from('matches').update({ status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString() }).eq('id', match.id);
       }
 
@@ -173,8 +179,8 @@ serve(async (req) => {
 
       if (gameEnded) {
         const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
-        const winnerId = determineWinner(players, capturedSlices);
-        const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+        const winnerResult = determineWinner(players, capturedSlices);
+        const winnerFid = winnerResult.winnerId ? parseInt(winnerResult.winnerId.replace('player_', '')) : null;
         await supabase.from('matches').update({ status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString() }).eq('id', match.id);
         result = { turnEnded: true, gameOver: true };
       } else {

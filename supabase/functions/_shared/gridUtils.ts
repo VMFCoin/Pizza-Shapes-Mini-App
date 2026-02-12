@@ -171,23 +171,38 @@ export function getPlayerScore(playerId: string, capturedSlices: PizzaSlice[]): 
   return capturedSlices.filter(s => s.capturedBy === playerId).length;
 }
 
-// Determine the winner
+// Winner result with tie detection
+export interface WinnerResult {
+  winnerId: string | null;  // null if tied
+  isTied: boolean;
+  tiedPlayerIds: string[];
+  maxScore: number;
+}
+
+// Determine the winner (detects ties instead of silently favoring first player)
 export function determineWinner(
   players: { id: string }[],
   capturedSlices: PizzaSlice[]
-): string | null {
-  if (players.length === 0) return null;
+): WinnerResult {
+  if (players.length === 0) return { winnerId: null, isTied: false, tiedPlayerIds: [], maxScore: 0 };
 
-  let maxScore = -1;
-  let winner: string | null = null;
+  const scores = players.map(p => ({
+    id: p.id,
+    score: getPlayerScore(p.id, capturedSlices),
+  }));
 
-  for (const player of players) {
-    const score = getPlayerScore(player.id, capturedSlices);
-    if (score > maxScore) {
-      maxScore = score;
-      winner = player.id;
-    }
+  const maxScore = Math.max(...scores.map(s => s.score));
+  const topPlayers = scores.filter(s => s.score === maxScore);
+
+  if (topPlayers.length === 1) {
+    return { winnerId: topPlayers[0].id, isTied: false, tiedPlayerIds: [], maxScore };
   }
 
-  return winner;
+  // Tie detected
+  return { winnerId: null, isTied: true, tiedPlayerIds: topPlayers.map(p => p.id), maxScore };
+}
+
+// Convenience helper for code that only needs the winner ID (non-tie case)
+export function getWinnerId(result: WinnerResult): string | null {
+  return result.winnerId;
 }

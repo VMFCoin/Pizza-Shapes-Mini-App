@@ -187,8 +187,8 @@ async function handleRollDice(supabase: any, match: any, gameState: any, readVer
   if (!hasRemainingSlices(possibleSlices, edges)) {
     const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
     const capturedSlices = gameState.captured_slices as PizzaSlice[];
-    const winnerId = determineWinner(players, capturedSlices);
-    const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+    const result = determineWinner(players, capturedSlices);
+    const winnerFid = result.winnerId ? parseInt(result.winnerId.replace('player_', '')) : null;
 
     const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
       status: 'completed',
@@ -333,8 +333,8 @@ async function handleDrawEdge(
   if (gameEnded) {
     // Determine winner
     const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
-    const winnerId = determineWinner(players, newCapturedSlices);
-    const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+    const result = determineWinner(players, newCapturedSlices);
+    const winnerFid = result.winnerId ? parseInt(result.winnerId.replace('player_', '')) : null;
 
     // Version-gated: mark game completed
     const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
@@ -390,8 +390,8 @@ async function handleEndTurn(supabase: any, match: any, gameState: any, readVers
 
   if (gameEnded) {
     const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
-    const winnerId = determineWinner(players, capturedSlices);
-    const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+    const result = determineWinner(players, capturedSlices);
+    const winnerFid = result.winnerId ? parseInt(result.winnerId.replace('player_', '')) : null;
 
     const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
       status: 'completed',
@@ -476,8 +476,8 @@ async function executeBotTurn(
   if (!hasRemainingSlices(possibleSlices, edges)) {
     console.log('[bot-inline] No remaining slices, ending game');
     const players = sortedPlayers.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
-    const winnerId = determineWinner(players, capturedSlices);
-    const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+    const result = determineWinner(players, capturedSlices);
+    const winnerFid = result.winnerId ? parseInt(result.winnerId.replace('player_', '')) : null;
     await versionGatedUpdate(supabase, matchId, botVersion, {
       status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString(),
     });
@@ -546,8 +546,8 @@ async function executeBotTurn(
       await supabase.from('match_players').update({ score: botScore })
         .eq('match_id', matchId).eq('player_fid', botFid);
       const players = sortedPlayers.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
-      const winnerId = determineWinner(players, capturedSlices);
-      const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
+      const result = determineWinner(players, capturedSlices);
+      const winnerFid = result.winnerId ? parseInt(result.winnerId.replace('player_', '')) : null;
       await versionGatedUpdate(supabase, matchId, botVersion, {
         status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString(),
       });

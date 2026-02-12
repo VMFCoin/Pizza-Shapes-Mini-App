@@ -64,9 +64,10 @@ function GameContent() {
 
   // Navigate to game over when game ends
   useEffect(() => {
-    if (isGameOver && winner) {
+    if (isGameOver) {
       const timer = setTimeout(() => {
-        router.push(`/game-over?matchId=${matchId}&winner=${winner.id}`);
+        const winnerParam = winner ? `&winner=${winner.id}` : '';
+        router.push(`/game-over?matchId=${matchId}${winnerParam}`);
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -77,6 +78,9 @@ function GameContent() {
   // Capture turnNumber at schedule time so the timeout only fires if it's still the same turn.
   const turnNumberRef = useRef(gameState?.turnNumber ?? 0);
   turnNumberRef.current = gameState?.turnNumber ?? 0;
+  // Stable ref for endTurn — prevents the effect from restarting the timer when endTurn ref changes
+  const endTurnStableRef = useRef(endTurn);
+  endTurnStableRef.current = endTurn;
 
   useEffect(() => {
     if (gameState && gamePhase === 'drawing' && gameState.movesRemaining === 0 && !isGameOver && isMyTurn) {
@@ -84,12 +88,13 @@ function GameContent() {
       const timer = setTimeout(() => {
         // Only end turn if it's still the same turn (prevents stale timeout from ending a new turn)
         if (turnNumberRef.current === scheduledTurn) {
-          endTurn();
+          endTurnStableRef.current();
         }
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [gameState, gamePhase, isGameOver, isMyTurn, endTurn]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, gamePhase, isGameOver, isMyTurn]);
 
   // Reset roll state when it becomes a new turn for this player
   useEffect(() => {
