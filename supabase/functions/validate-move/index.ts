@@ -15,6 +15,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const VERSION_CONFLICT = { error: 'version_conflict', message: 'State changed, please retry' };
+
+/**
+ * Version-gated update on matches table.
+ * Returns true if the update succeeded (version matched), false if there was a conflict.
+ * Every write path in validate-move must go through this to prevent TOCTOU race conditions.
+ */
+async function versionGatedUpdate(
+  supabase: any,
+  matchId: string,
+  readVersion: number,
+  fields: Record<string, any>
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('matches')
+    .update({ ...fields, version: readVersion + 1 })
+    .eq('id', matchId)
+    .eq('version', readVersion)
+    .select('id');
+
+  if (error) {
+    console.error('[versionGatedUpdate] DB error:', error);
+    return false;
+  }
+
+  return data && data.length > 0;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -73,6 +101,9 @@ serve(async (req) => {
       );
     }
 
+    // Capture the version at read time for optimistic concurrency control
+    const readVersion: number = match.version ?? 1;
+
     // Get current player
     const sortedPlayers = match.match_players.sort(
       (a: any, b: any) => a.player_index - b.player_index
@@ -91,19 +122,27 @@ serve(async (req) => {
 
     switch (moveType) {
       case 'roll_dice':
-        result = await handleRollDice(supabase, match, gameState);
+        result = await handleRollDice(supabase, match, gameState, readVersion);
         break;
       case 'draw_edge':
-        result = await handleDrawEdge(supabase, match, gameState, moveData.edgeId, playerFid);
+        result = await handleDrawEdge(supabase, match, gameState, moveData.edgeId, playerFid, readVersion);
         break;
       case 'end_turn':
-        result = await handleEndTurn(supabase, match, gameState);
+        result = await handleEndTurn(supabase, match, gameState, readVersion);
         break;
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid move type' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+    }
+
+    // Version conflict detected by handler
+    if (result === null) {
+      return new Response(
+        JSON.stringify(VERSION_CONFLICT),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Log move to history
@@ -128,7 +167,8 @@ serve(async (req) => {
   }
 });
 
-async function handleRollDice(supabase: any, match: any, gameState: any) {
+// Returns null on version conflict, otherwise the result object
+async function handleRollDice(supabase: any, match: any, gameState: any, readVersion: number) {
   // Prevent rolling if player already rolled this turn
   if (gameState.moves_remaining > 0 || gameState.dice_roll !== null) {
     return {
@@ -144,21 +184,18 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
   const possibleSlices = gameState.possible_slices as PizzaSlice[];
 
   // Check if the game should end — no remaining slices means no point rolling.
-  // Without this check, when availableMoves=0, every roll > 0 skips turn infinitely.
   if (!hasRemainingSlices(possibleSlices, edges)) {
     const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
     const capturedSlices = gameState.captured_slices as PizzaSlice[];
     const winnerId = determineWinner(players, capturedSlices);
     const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
 
-    await supabase
-      .from('matches')
-      .update({
-        status: 'completed',
-        winner_fid: winnerFid,
-        ended_at: new Date().toISOString(),
-      })
-      .eq('id', match.id);
+    const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
+      status: 'completed',
+      winner_fid: winnerFid,
+      ended_at: new Date().toISOString(),
+    });
+    if (!ok) return null;
 
     return {
       diceRoll: null,
@@ -180,16 +217,15 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
     const nextPlayerIndex = (match.current_player_index + 1) % sortedPlayers.length;
     const nextPlayer = sortedPlayers[nextPlayerIndex];
 
-    // Update match - advance to next player
-    await supabase
-      .from('matches')
-      .update({
-        current_player_index: nextPlayerIndex,
-        turn_number: match.turn_number + 1,
-      })
-      .eq('id', match.id);
+    // Version-gated: advance to next player
+    const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
+      current_player_index: nextPlayerIndex,
+      turn_number: match.turn_number + 1,
+      turn_started_at: new Date().toISOString(),
+    });
+    if (!ok) return null;
 
-    // Update game state — reset dice_roll to null so the next player can roll
+    // Reset game state for next player
     await supabase
       .from('game_states')
       .update({
@@ -202,7 +238,7 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
     // If the next player is a bot, execute bot turn inline
     if (nextPlayer?.is_bot) {
       try {
-        await executeBotTurn(supabase, match.id, nextPlayer.player_fid, nextPlayerIndex, sortedPlayers, match.turn_number + 1, gameState);
+        await executeBotTurn(supabase, match.id, nextPlayer.player_fid, nextPlayerIndex, sortedPlayers, match.turn_number + 1, readVersion + 1, gameState);
       } catch (err: any) {
         console.error('Inline bot turn error (turn_skip):', err);
       }
@@ -217,7 +253,11 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
     };
   }
 
-  // Normal roll - player can make moves
+  // Normal roll — version-gate to prevent two concurrent rolls
+  const ok = await versionGatedUpdate(supabase, match.id, readVersion, {});
+  if (!ok) return null;
+
+  // Now safe to update game_states
   await supabase
     .from('game_states')
     .update({
@@ -235,12 +275,14 @@ async function handleRollDice(supabase: any, match: any, gameState: any) {
   };
 }
 
+// Returns null on version conflict, otherwise the result object
 async function handleDrawEdge(
   supabase: any,
   match: any,
   gameState: any,
   edgeId: string,
-  playerFid: number
+  playerFid: number,
+  readVersion: number
 ) {
   const edges = gameState.edges as Edge[];
   const possibleSlices = gameState.possible_slices as PizzaSlice[];
@@ -294,18 +336,20 @@ async function handleDrawEdge(
     const winnerId = determineWinner(players, newCapturedSlices);
     const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
 
-    // Update match as completed
-    await supabase
-      .from('matches')
-      .update({
-        status: 'completed',
-        winner_fid: winnerFid,
-        ended_at: new Date().toISOString(),
-      })
-      .eq('id', match.id);
+    // Version-gated: mark game completed
+    const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
+      status: 'completed',
+      winner_fid: winnerFid,
+      ended_at: new Date().toISOString(),
+    });
+    if (!ok) return null;
+  } else {
+    // Version-gated: bump version (no turn change, but prevents concurrent draw_edge)
+    const ok = await versionGatedUpdate(supabase, match.id, readVersion, {});
+    if (!ok) return null;
   }
 
-  // Update game state
+  // Now safe to update game state
   await supabase
     .from('game_states')
     .update({
@@ -335,7 +379,8 @@ async function handleDrawEdge(
   };
 }
 
-async function handleEndTurn(supabase: any, match: any, gameState: any) {
+// Returns null on version conflict, otherwise the result object
+async function handleEndTurn(supabase: any, match: any, gameState: any, readVersion: number) {
   const edges = gameState.edges as Edge[];
   const possibleSlices = gameState.possible_slices as PizzaSlice[];
   const capturedSlices = gameState.captured_slices as PizzaSlice[];
@@ -348,14 +393,12 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
     const winnerId = determineWinner(players, capturedSlices);
     const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
 
-    await supabase
-      .from('matches')
-      .update({
-        status: 'completed',
-        winner_fid: winnerFid,
-        ended_at: new Date().toISOString(),
-      })
-      .eq('id', match.id);
+    const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
+      status: 'completed',
+      winner_fid: winnerFid,
+      ended_at: new Date().toISOString(),
+    });
+    if (!ok) return null;
 
     return { turnEnded: true, gameOver: true };
   }
@@ -367,13 +410,13 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
   const nextPlayerIndex = (match.current_player_index + 1) % sortedPlayers.length;
   const nextPlayer = sortedPlayers[nextPlayerIndex];
 
-  await supabase
-    .from('matches')
-    .update({
-      current_player_index: nextPlayerIndex,
-      turn_number: match.turn_number + 1,
-    })
-    .eq('id', match.id);
+  // Version-gated: advance turn
+  const ok = await versionGatedUpdate(supabase, match.id, readVersion, {
+    current_player_index: nextPlayerIndex,
+    turn_number: match.turn_number + 1,
+    turn_started_at: new Date().toISOString(),
+  });
+  if (!ok) return null;
 
   await supabase
     .from('game_states')
@@ -385,13 +428,9 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
     .eq('match_id', match.id);
 
   // If the next player is a bot, execute the bot's turn inline.
-  // Previous approach (calling trigger-bot-turn via fetch) failed because:
-  // - Awaiting blocked the response and caused timeout
-  // - Fire-and-forget was killed by Deno runtime after response sent
-  // Inline approach: bot plays its entire turn within this single invocation.
   if (nextPlayer?.is_bot) {
     try {
-      await executeBotTurn(supabase, match.id, nextPlayer.player_fid, nextPlayerIndex, sortedPlayers, match.turn_number + 1, gameState);
+      await executeBotTurn(supabase, match.id, nextPlayer.player_fid, nextPlayerIndex, sortedPlayers, match.turn_number + 1, readVersion + 1, gameState);
     } catch (err: any) {
       console.error('Inline bot turn error:', err);
       // Don't fail the human's end_turn — bot error is non-fatal
@@ -411,6 +450,9 @@ async function handleEndTurn(supabase: any, match: any, gameState: any) {
  * Processes all moves IN MEMORY then writes final state to DB in 2 writes
  * (game_states + matches). This keeps the function fast and avoids
  * per-move DB round-trips that could cause timeouts.
+ *
+ * botVersion: the version AFTER the preceding human turn was committed.
+ * The bot bumps it again when writing its final state.
  */
 async function executeBotTurn(
   supabase: any,
@@ -419,6 +461,7 @@ async function executeBotTurn(
   botPlayerIndex: number,
   sortedPlayers: any[],
   currentTurnNumber: number,
+  botVersion: number,
   gameState: any
 ) {
   const botPlayerId = `player_${botFid}`;
@@ -435,9 +478,9 @@ async function executeBotTurn(
     const players = sortedPlayers.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
     const winnerId = determineWinner(players, capturedSlices);
     const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
-    await supabase.from('matches').update({
+    await versionGatedUpdate(supabase, matchId, botVersion, {
       status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString(),
-    }).eq('id', matchId);
+    });
     return;
   }
 
@@ -449,10 +492,11 @@ async function executeBotTurn(
   if (roll > availableMoves) {
     console.log(`[bot-inline] Roll ${roll} > ${availableMoves} available, skipping`);
     const nextIdx = (botPlayerIndex + 1) % sortedPlayers.length;
-    await supabase.from('matches').update({
+    await versionGatedUpdate(supabase, matchId, botVersion, {
       current_player_index: nextIdx,
       turn_number: currentTurnNumber + 1,
-    }).eq('id', matchId);
+      turn_started_at: new Date().toISOString(),
+    });
     await supabase.from('game_states').update({
       dice_roll: null, moves_remaining: 0, updated_at: new Date().toISOString(),
     }).eq('match_id', matchId);
@@ -504,14 +548,14 @@ async function executeBotTurn(
       const players = sortedPlayers.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
       const winnerId = determineWinner(players, capturedSlices);
       const winnerFid = winnerId ? parseInt(winnerId.replace('player_', '')) : null;
-      await supabase.from('matches').update({
+      await versionGatedUpdate(supabase, matchId, botVersion, {
         status: 'completed', winner_fid: winnerFid, ended_at: new Date().toISOString(),
-      }).eq('id', matchId);
+      });
       return;
     }
   }
 
-  // Step 3: Write final board state + end bot's turn in 2 DB writes
+  // Step 3: Write final board state + end bot's turn
   const nextIdx = (botPlayerIndex + 1) % sortedPlayers.length;
   const botScore = capturedSlices.filter((s: PizzaSlice) => s.capturedBy === botPlayerId).length;
 
@@ -523,10 +567,11 @@ async function executeBotTurn(
   await supabase.from('match_players').update({ score: botScore })
     .eq('match_id', matchId).eq('player_fid', botFid);
 
-  await supabase.from('matches').update({
+  await versionGatedUpdate(supabase, matchId, botVersion, {
     current_player_index: nextIdx,
     turn_number: currentTurnNumber + 1,
-  }).eq('id', matchId);
+    turn_started_at: new Date().toISOString(),
+  });
 
   console.log(`[bot-inline] Bot turn complete: ${movesPlayed} moves, score=${botScore}, next player=${nextIdx}`);
 }

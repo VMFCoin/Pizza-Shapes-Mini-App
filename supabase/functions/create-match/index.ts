@@ -195,6 +195,8 @@ serve(async (req) => {
         tier,
         grid_size: tierConfig.gridSize,
         status: 'countdown',
+        version: 1,
+        turn_started_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -281,6 +283,7 @@ serve(async (req) => {
       .update({
         status: 'active',
         started_at: new Date().toISOString(),
+        turn_started_at: new Date().toISOString(),
       })
       .eq('id', match.id)
       .eq('status', 'countdown');

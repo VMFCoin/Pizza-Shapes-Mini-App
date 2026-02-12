@@ -100,6 +100,8 @@ export type Database = {
           current_player_index: number;
           turn_number: number;
           winner_fid: number | null;
+          version: number;
+          turn_started_at: string;
           created_at: string;
           started_at: string | null;
           ended_at: string | null;
@@ -112,6 +114,8 @@ export type Database = {
           current_player_index?: number;
           turn_number?: number;
           winner_fid?: number | null;
+          version?: number;
+          turn_started_at?: string;
           created_at?: string;
           started_at?: string | null;
           ended_at?: string | null;
@@ -123,6 +127,8 @@ export type Database = {
           current_player_index?: number;
           turn_number?: number;
           winner_fid?: number | null;
+          version?: number;
+          turn_started_at?: string;
           started_at?: string | null;
           ended_at?: string | null;
         };
@@ -217,7 +223,7 @@ export type Database = {
           match_id: string;
           player_fid: number;
           turn_number: number;
-          move_type: 'roll_dice' | 'draw_edge' | 'end_turn' | 'bot_takeover';
+          move_type: 'roll_dice' | 'draw_edge' | 'end_turn' | 'bot_takeover' | 'turn_timeout';
           move_data: unknown;
           created_at: string;
         };
@@ -226,13 +232,13 @@ export type Database = {
           match_id: string;
           player_fid: number;
           turn_number: number;
-          move_type: 'roll_dice' | 'draw_edge' | 'end_turn' | 'bot_takeover';
+          move_type: 'roll_dice' | 'draw_edge' | 'end_turn' | 'bot_takeover' | 'turn_timeout';
           move_data: unknown;
           created_at?: string;
         };
         Update: {
           turn_number?: number;
-          move_type?: 'roll_dice' | 'draw_edge' | 'end_turn' | 'bot_takeover';
+          move_type?: 'roll_dice' | 'draw_edge' | 'end_turn' | 'bot_takeover' | 'turn_timeout';
           move_data?: unknown;
         };
       };

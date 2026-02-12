@@ -73,6 +73,8 @@ export function useRealtimeGame(
   const endTurnRef = useRef<() => Promise<void>>(() => Promise.resolve());
   // Ref for isMyTurn so the timer effect reads the latest value without re-subscribing
   const isMyTurnRef = useRef(false);
+  // Ref for fetchGameState so version-conflict handlers can re-fetch without dep changes
+  const fetchGameStateRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   // Derive current player from game state
   const currentPlayer = useMemo(() => {
@@ -203,6 +205,9 @@ export function useRealtimeGame(
       setIsLoading(false);
     }
   }, [matchId, determinePhase]);
+
+  // Keep ref in sync so version-conflict handlers can re-fetch without dep changes
+  fetchGameStateRef.current = fetchGameState;
 
   // Handle game state updates from realtime subscription
   const handleGameStateUpdate = useCallback((payload: any) => {
@@ -405,8 +410,15 @@ export function useRealtimeGame(
 
       console.log(`[rollDice] Response:`, JSON.stringify(data), `error:`, invokeError);
 
-      if (invokeError) {
-        throw new Error(invokeError.message);
+      // Check for version conflict or other errors
+      if (invokeError || data?.error === 'version_conflict') {
+        const msg = invokeError?.message || data?.error || '';
+        if (msg.includes('version_conflict')) {
+          console.warn(`[rollDice] Version conflict — re-fetching game state`);
+          await fetchGameStateRef.current();
+          return -1;
+        }
+        throw new Error(invokeError?.message || 'Failed to roll dice');
       }
 
       // Handle game-over detected during roll (no remaining slices)
@@ -496,10 +508,13 @@ export function useRealtimeGame(
           if (!prev) return prev;
           return { ...prev, movesRemaining: prev.movesRemaining + 1 };
         });
-        // "Not your turn" is a race condition, not a real error — silently rollback
+        // "Not your turn" or version conflict are race conditions, not real errors — silently rollback
         const msg = invokeError.message || '';
-        if (msg.includes('Not your turn') || msg.includes('not your turn')) {
-          console.warn(`[drawEdge] Server says not our turn — rolled back optimistic update`);
+        if (msg.includes('Not your turn') || msg.includes('not your turn') || msg.includes('version_conflict')) {
+          console.warn(`[drawEdge] Server rejected (${msg}) — rolled back optimistic update`);
+          if (msg.includes('version_conflict')) {
+            await fetchGameStateRef.current();
+          }
           return { captured: [], extraTurn: false };
         }
         throw new Error(invokeError.message);
@@ -594,8 +609,14 @@ export function useRealtimeGame(
 
       console.log(`[endTurn] Response:`, JSON.stringify(data), `error:`, invokeError);
 
-      if (invokeError) {
-        throw new Error(invokeError.message);
+      if (invokeError || data?.error === 'version_conflict') {
+        const msg = invokeError?.message || data?.error || '';
+        if (msg.includes('version_conflict')) {
+          console.warn(`[endTurn] Version conflict — re-fetching game state`);
+          await fetchGameStateRef.current();
+          return;
+        }
+        throw new Error(invokeError?.message || 'Failed to end turn');
       }
 
       // Check if the server detected game-over during end_turn
