@@ -171,10 +171,24 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         body: { tier, playerFid: fid },
       });
 
-      console.log('[matchmaking] Server response:', JSON.stringify(data));
+      console.log('[matchmaking] Server response:', JSON.stringify(data), 'error:', invokeError ? JSON.stringify(invokeError) : 'none');
 
       if (invokeError) {
         console.error('[matchmaking] create-match error:', invokeError);
+        // Even on error, check if the player was already matched (race condition)
+        // The server may have matched us but returned an error on a duplicate call
+        if (queueEntryIdRef.current) {
+          const { data: entry } = await (supabase as any)
+            .from('match_queue')
+            .select('match_id, status')
+            .eq('id', queueEntryIdRef.current)
+            .single();
+          if (entry?.status === 'matched' && entry?.match_id) {
+            console.log('[matchmaking] Found match via fallback check:', entry.match_id);
+            setMatchId(entry.match_id);
+            setIsMatchReady(true);
+          }
+        }
         return;
       }
 
@@ -420,7 +434,8 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const readyPlayerCount = queuePlayers.filter(p => p.isReady).length;
 
   // === PRIMARY MATCH DETECTION ===
-  // Poll: check if THIS queue entry was matched by the server
+  // Poll: check if THIS queue entry was matched by the server (or another player's create-match call)
+  // Polls every 1s for fast detection
   useEffect(() => {
     if (!isInQueue || isMatchReady || !currentPlayerRef.current || !isSupabaseAvailable()) return;
     if (!queueEntryIdRef.current) return;
@@ -443,7 +458,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         setMatchId(data.match_id);
         setIsMatchReady(true);
       }
-    }, MATCHMAKING_POLL_MS);
+    }, 1000); // Poll every 1s for fast match detection
 
     return () => clearInterval(pollInterval);
   }, [isInQueue, isMatchReady]);

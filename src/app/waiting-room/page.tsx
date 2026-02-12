@@ -109,12 +109,26 @@ function WaitingRoomContent() {
     }
   }, [isMatchReady, matchId, tier, router]);
 
-  // When countdown reaches 0 with only 1 ready player, add bot opponent
+  // When countdown reaches 0:
+  // - 1 ready player: add bot opponent and start
+  // - 2+ ready players: force one final matchmaking attempt
   useEffect(() => {
-    if (countdown === 0 && isCurrentPlayerReady && readyPlayerCount === 1) {
+    if (countdown !== 0 || !isCurrentPlayerReady) return;
+
+    if (readyPlayerCount === 1) {
       addBotAndStartMatch();
+    } else if (readyPlayerCount >= 2 && matchId === undefined) {
+      // Force a final matchmaking attempt — the polling may have missed it
+      console.log('[waiting-room] Countdown 0 with', readyPlayerCount, 'ready — forcing matchmaking');
+      supabase.functions.invoke('create-match', {
+        body: { tier, playerFid: currentPlayer?.fid },
+      }).then(({ data }) => {
+        if (data?.matchId) {
+          router.push(`/game?matchId=${data.matchId}&tier=${tier}`);
+        }
+      }).catch(err => console.error('[waiting-room] Force matchmaking failed:', err));
     }
-  }, [countdown, isCurrentPlayerReady, readyPlayerCount, addBotAndStartMatch]);
+  }, [countdown, isCurrentPlayerReady, readyPlayerCount, addBotAndStartMatch, matchId, tier, currentPlayer?.fid, router]);
 
   // Handle Enter Game payment
   const handleEnterGame = async () => {
