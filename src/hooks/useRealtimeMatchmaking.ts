@@ -235,12 +235,12 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       // Refresh queue so everyone sees the update
       await refreshQueuePlayers(selectedTier);
 
-      // Immediately try matchmaking now that we're ready
-      await triggerMatchmaking(selectedTier);
+      // Matchmaking will be triggered by the MATCHMAKING TRIGGER effect
+      // after a 5s delay to give more players a chance to join
     } catch (err) {
       console.error('[matchmaking] Failed to mark player ready:', err);
     }
-  }, [refreshQueuePlayers, selectedTier, triggerMatchmaking]);
+  }, [refreshQueuePlayers, selectedTier]);
 
   // Subscribe to queue changes for the selected tier
   const subscribeToQueue = useCallback(async (tier: number) => {
@@ -464,13 +464,16 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   }, [isInQueue, isMatchReady]);
 
   // === MATCHMAKING TRIGGER ===
-  // When this player is ready, periodically ask the server to try matching
-  // Server does FIFO grouping — we just need to knock on the door
+  // When this player is ready, wait 5s before first attempt to give more players
+  // a chance to join, then retry every 3s.
   useEffect(() => {
     if (!isCurrentPlayerReady || isMatchReady || !isInQueue) return;
 
-    // Try immediately once
-    triggerMatchmaking(selectedTier);
+    // Wait 5 seconds before first matchmaking attempt
+    const initialDelay = setTimeout(() => {
+      if (isMatchReady) return;
+      triggerMatchmaking(selectedTier);
+    }, 5000);
 
     // Then retry every few seconds in case more players became ready
     const retryInterval = setInterval(() => {
@@ -478,7 +481,10 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       triggerMatchmaking(selectedTier);
     }, MATCHMAKING_POLL_MS);
 
-    return () => clearInterval(retryInterval);
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(retryInterval);
+    };
   }, [isCurrentPlayerReady, isMatchReady, isInQueue, selectedTier, triggerMatchmaking]);
 
   return {
