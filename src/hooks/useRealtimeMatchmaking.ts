@@ -33,7 +33,7 @@ const MIN_PLAYERS_TO_START = 2;
 // Queue entries older than 5 minutes are considered stale
 const STALE_ENTRY_MS = 5 * 60 * 1000;
 // How often to ask the server to try matchmaking (ms)
-const MATCHMAKING_POLL_MS = 3000;
+const MATCHMAKING_POLL_MS = 5000;
 
 export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtimeMatchmakingReturn {
   const [isInQueue, setIsInQueue] = useState(false);
