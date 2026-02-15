@@ -37,19 +37,18 @@ class MultiplayerDebugger {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      // Auto-enable in development mode OR if explicitly enabled
-      const isDev = process.env.NODE_ENV === 'development';
-      const explicitlyEnabled = localStorage.getItem('PIZZA_DEBUG') === 'true';
+      // TEMPORARY: Auto-enable in ALL environments for live testing
+      // Only disable if explicitly set to 'false'
       const explicitlyDisabled = localStorage.getItem('PIZZA_DEBUG') === 'false';
 
-      // Enable if: dev mode (unless explicitly disabled) OR explicitly enabled
-      this.enabled = explicitlyDisabled ? false : (isDev || explicitlyEnabled);
+      // Enable by default (unless explicitly disabled)
+      this.enabled = !explicitlyDisabled;
 
       const filterStr = localStorage.getItem('PIZZA_DEBUG_FILTER');
       if (filterStr) {
         this.filter = new Set(filterStr.split(',').map(s => s.trim() as DebugCategory));
-      } else if (isDev && !explicitlyDisabled) {
-        // Default filter in dev mode: focus on game flow
+      } else if (!explicitlyDisabled) {
+        // Default filter: focus on game flow
         this.filter = new Set(['game', 'timer', 'bot', 'realtime'] as DebugCategory[]);
       }
     }
