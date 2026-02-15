@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase, isSupabaseAvailable } from '@/lib/supabase';
 import { Player, MatchID, ENTRY_TIERS } from '@/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { mpDebugger as debug } from '@/lib/debug';
 
 // Extended player info with ready status
 export interface QueuePlayer extends Player {
@@ -110,7 +111,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       .order('joined_at', { ascending: true });
 
     if (fetchError) {
-      console.error('[matchmaking] Error fetching queue:', fetchError);
+      debug.error('matchmaking', 'Error fetching queue:', fetchError);
       return;
     }
 
@@ -165,16 +166,16 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
     try {
       const fid = currentPlayerRef.current.fid;
-      console.log('[matchmaking] Requesting server matchmaking:', { tier, playerFid: fid });
+      debug.info('matchmaking', 'Requesting server matchmaking:', { tier, playerFid: fid });
 
       const { data, error: invokeError } = await supabase.functions.invoke('create-match', {
         body: { tier, playerFid: fid },
       });
 
-      console.log('[matchmaking] Server response:', JSON.stringify(data), 'error:', invokeError ? JSON.stringify(invokeError) : 'none');
+      debug.info('matchmaking', 'Server response', { data: JSON.stringify(data), error: invokeError ? JSON.stringify(invokeError) : 'none' });
 
       if (invokeError) {
-        console.error('[matchmaking] create-match error:', invokeError);
+        debug.error('matchmaking', 'create-match error:', invokeError);
         // Even on error, check if the player was already matched (race condition)
         // The server may have matched us but returned an error on a duplicate call
         if (queueEntryIdRef.current) {
@@ -184,7 +185,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
             .eq('id', queueEntryIdRef.current)
             .single();
           if (entry?.status === 'matched' && entry?.match_id) {
-            console.log('[matchmaking] Found match via fallback check:', entry.match_id);
+            debug.info('matchmaking', 'Found match via fallback check:', entry.match_id);
             setMatchId(entry.match_id);
             setIsMatchReady(true);
           }
@@ -193,14 +194,14 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       }
 
       if (data?.matchId) {
-        console.log('[matchmaking] Match created:', data.matchId);
+        debug.info('matchmaking', 'Match created:', data.matchId);
         setMatchId(data.matchId);
         setIsMatchReady(true);
       } else if (data?.waiting) {
-        console.log('[matchmaking] Server says keep waiting:', data.readyCount, '/', data.needed);
+        debug.info('matchmaking', 'Server says keep waiting', { readyCount: data.readyCount, needed: data.needed });
       }
     } catch (err) {
-      console.error('[matchmaking] Exception in triggerMatchmaking:', err);
+      debug.error('matchmaking', 'Exception in triggerMatchmaking:', err);
     } finally {
       matchmakingInFlightRef.current = false;
     }
@@ -209,7 +210,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   // Mark current player as ready (after payment)
   const markPlayerReady = useCallback(async () => {
     if (!isSupabaseAvailable() || !queueEntryIdRef.current || !currentPlayerRef.current) {
-      console.warn('[matchmaking] Cannot mark ready:', {
+      debug.warn('matchmaking', 'Cannot mark ready:', {
         supabase: isSupabaseAvailable(),
         queueEntry: queueEntryIdRef.current,
         player: currentPlayerRef.current?.fid,
@@ -218,18 +219,18 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     }
 
     try {
-      console.log('[matchmaking] Marking player ready:', { queueEntryId: queueEntryIdRef.current });
+      debug.info('matchmaking', 'Marking player ready:', { queueEntryId: queueEntryIdRef.current });
       const { error: updateError } = await (supabase as any)
         .from('match_queue')
         .update({ is_ready: true })
         .eq('id', queueEntryIdRef.current);
 
       if (updateError) {
-        console.error('[matchmaking] Error marking player ready:', updateError);
+        debug.error('matchmaking', 'Error marking player ready:', updateError);
         return;
       }
 
-      console.log('[matchmaking] Player marked ready successfully');
+      debug.info('matchmaking', 'Player marked ready successfully');
       setIsCurrentPlayerReady(true);
 
       // Refresh queue so everyone sees the update
@@ -238,7 +239,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       // Matchmaking will be triggered by the MATCHMAKING TRIGGER effect
       // after a 5s delay to give more players a chance to join
     } catch (err) {
-      console.error('[matchmaking] Failed to mark player ready:', err);
+      debug.error('matchmaking', 'Failed to mark player ready:', err);
     }
   }, [refreshQueuePlayers, selectedTier]);
 
@@ -266,7 +267,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
           filter: `tier=eq.${tier}`,
         },
         async (payload) => {
-          console.log('[matchmaking] Realtime event:', payload.eventType, (payload.new as any)?.status, (payload.new as any)?.player_fid);
+          debug.info('matchmaking', 'Realtime event', { eventType: payload.eventType, status: (payload.new as any)?.status, playerFid: (payload.new as any)?.player_fid });
 
           // Check if current player was matched via realtime
           if (
@@ -279,7 +280,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
             const newMatchId = (payload.new as any).match_id as string;
 
             if (matchedFid === currentPlayerRef.current?.fid) {
-              console.log('[matchmaking] Current player matched via realtime:', newMatchId);
+              debug.info('matchmaking', 'Current player matched via realtime:', newMatchId);
               setMatchId(newMatchId);
               setIsMatchReady(true);
               return;
@@ -335,7 +336,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
 
       // Cancel ALL old queue entries for this player (waiting AND matched)
       // This prevents stale entries from causing redirect to dead games
-      console.log('[matchmaking] Cleaning up old queue entries for fid:', player.fid);
+      debug.info('matchmaking', 'Cleaning up old queue entries for fid:', player.fid);
       await (supabase as any)
         .from('match_queue')
         .update({ status: 'cancelled' })
@@ -365,7 +366,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       await refreshQueuePlayers(tier);
     } catch (err: any) {
       setError(err.message || 'Failed to join queue');
-      console.error('[matchmaking] Join queue error:', err);
+      debug.error('matchmaking', 'Join queue error:', err);
       isJoiningRef.current = false;
     }
   }, [isInQueue, subscribeToQueue, refreshQueuePlayers, startCountdown]);
@@ -405,7 +406,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       isJoiningRef.current = false;
       matchmakingInFlightRef.current = false;
     } catch (err) {
-      console.error('[matchmaking] Leave queue error:', err);
+      debug.error('matchmaking', 'Leave queue error:', err);
     }
   }, [isInQueue]);
 
@@ -418,7 +419,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
           .from('match_queue')
           .update({ status: 'cancelled' })
           .eq('id', queueEntryIdRef.current)
-          .then(() => console.log('[matchmaking] Queue entry cancelled on unmount'))
+          .then(() => debug.info('matchmaking', 'Queue entry cancelled on unmount'))
           .catch(() => {}); // Best effort
       }
       if (isSupabaseAvailable() && channelRef.current) {
@@ -454,7 +455,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       if (pollError) return;
 
       if (data?.status === 'matched' && data?.match_id) {
-        console.log('[matchmaking] Match found via polling:', data.match_id);
+        debug.info('matchmaking', 'Match found via polling:', data.match_id);
         setMatchId(data.match_id);
         setIsMatchReady(true);
       }
