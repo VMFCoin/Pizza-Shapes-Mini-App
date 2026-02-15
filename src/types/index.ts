@@ -38,6 +38,7 @@ export interface Player {
   color: string;
   isBot?: boolean;
   isConnected?: boolean;
+  initialRoll?: number; // Initial dice roll (1-6) to determine turn order
 }
 
 // Player statistics

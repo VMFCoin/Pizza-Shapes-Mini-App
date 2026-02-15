@@ -10,3 +10,4 @@ export { FreeRollModal } from './FreeRollModal';
 export { ShareInviteModal } from './ShareInviteModal';
 export { Background, AmusementParkBackground } from './Background';
 export { DotText, GlowText } from './DotText';
+export { InitialRollDisplay } from './InitialRollDisplay';

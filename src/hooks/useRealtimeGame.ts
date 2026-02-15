@@ -153,14 +153,15 @@ export function useRealtimeGame(
       const players: Player[] = (matchData.match_players || [])
         .sort((a: any, b: any) => a.player_index - b.player_index)
         .map((mp: any) => ({
-          id: `player_$mp.player_fid`,
+          id: `player_${mp.player_fid}`,
           fid: mp.player_fid,
-          displayName: mp.players?.display_name || `Player $mp.player_fid`,
+          displayName: mp.players?.display_name || `Player ${mp.player_fid}`,
           pfpUrl: mp.players?.pfp_url || '',
           address: mp.players?.address || '',
           color: mp.color || PLAYER_COLORS[mp.player_index % PLAYER_COLORS.length],
           isBot: mp.is_bot,
           isConnected: mp.is_connected,
+          initialRoll: mp.initial_roll,
         }));
 
       // Get or initialize game state

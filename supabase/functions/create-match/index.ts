@@ -227,6 +227,7 @@ serve(async (req) => {
       player_fid: entry.fid,
       color: PLAYER_COLORS[index % PLAYER_COLORS.length],
       player_index: index,
+      initial_roll: entry.roll,
       is_bot: false,
       is_connected: true,
     }));

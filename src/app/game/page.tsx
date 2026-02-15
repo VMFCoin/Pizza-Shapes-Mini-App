@@ -11,6 +11,7 @@ import {
   WalletDisplayCompact,
   Confetti,
   Background,
+  InitialRollDisplay,
 } from '@/components';
 import { useWallet, useFarcaster } from '@/hooks';
 import { useRealtimeGame } from '@/hooks/useRealtimeGame';
@@ -61,6 +62,18 @@ function GameContent() {
     sliceCount: number;
   } | null>(null);
   const [captureStreak, setCaptureStreak] = useState(0);
+  const [showInitialRolls, setShowInitialRolls] = useState(true);
+  const [hasSeenInitialRolls, setHasSeenInitialRolls] = useState(false);
+
+  // Check if we should show initial rolls (only if all players have initialRoll set and we haven't seen them yet)
+  const shouldShowInitialRolls =
+    !hasSeenInitialRolls &&
+    gameState &&
+    !isLoading &&
+    gameState.players.length > 0 &&
+    gameState.players.every(p => p.initialRoll !== undefined && p.initialRoll !== null) &&
+    gameState.turnNumber === 1 &&
+    showInitialRolls;
 
   // Navigate to game over when game ends
   useEffect(() => {
@@ -220,6 +233,17 @@ function GameContent() {
   return (
     <main className="min-h-screen relative overflow-hidden">
       <Background />
+
+      {/* Initial roll-off display */}
+      {shouldShowInitialRolls && (
+        <InitialRollDisplay
+          players={gameState.players}
+          onComplete={() => {
+            setShowInitialRolls(false);
+            setHasSeenInitialRolls(true);
+          }}
+        />
+      )}
 
       {/* Connection status banner - keycap style */}
       {connectionStatus !== 'connected' && (
