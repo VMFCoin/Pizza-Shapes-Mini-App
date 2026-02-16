@@ -50,12 +50,15 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[validate-move] Request received');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const { matchId, playerFid, moveType, moveData } = await req.json();
+    const body = await req.json();
+    console.log('[validate-move] Body:', JSON.stringify(body));
+    const { matchId, playerFid, moveType, moveData } = body;
 
     if (!matchId || !playerFid || !moveType) {
       return new Response(
@@ -65,6 +68,7 @@ serve(async (req) => {
     }
 
     // Fetch current match and game state
+    console.log('[validate-move] Fetching match:', matchId);
     const { data: match, error: matchError } = await supabase
       .from('matches')
       .select(`
@@ -80,11 +84,14 @@ serve(async (req) => {
       .single();
 
     if (matchError || !match) {
+      console.error('[validate-move] Match fetch error:', matchError);
       return new Response(
-        JSON.stringify({ error: 'Match not found' }),
+        JSON.stringify({ error: 'Match not found', dbError: matchError?.message }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('[validate-move] Match found, status:', match.status, 'moveType:', moveType);
 
     if (match.status !== 'active') {
       return new Response(
@@ -197,8 +204,18 @@ serve(async (req) => {
     );
   } catch (error: any) {
     console.error('Validate move error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify({
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    }));
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({
+        error: error.message || 'Internal server error',
+        errorType: error.name,
+        details: error.stack?.split('\n')[0] || 'No stack trace',
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
