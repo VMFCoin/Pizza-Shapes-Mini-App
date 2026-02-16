@@ -211,15 +211,38 @@ serve(async (req) => {
     }
 
     // Step 3: Initial dice roll-off to determine turn order
-    // Each player rolls 1-6, highest goes first. Ties are re-rolled.
+    // Each player rolls 1-6, highest goes first. Ties are re-rolled until no duplicates at top.
     const initialRolls: { fid: number; roll: number }[] = finalPlayerFids.map((fid: number) => ({
       fid,
       roll: Math.floor(Math.random() * 6) + 1,
     }));
-    // Sort by roll descending (highest first). Ties broken by random (shuffle first)
-    initialRolls.sort((a, b) => b.roll - a.roll);
 
-    console.log('[create-match] Initial roll-off:', initialRolls);
+    // Re-roll tied players until the highest roll is unique
+    let maxRoll = Math.max(...initialRolls.map(r => r.roll));
+    let tiedPlayers = initialRolls.filter(r => r.roll === maxRoll);
+    let rerollCount = 0;
+    while (tiedPlayers.length > 1 && rerollCount < 10) {
+      console.log(`[create-match] ${tiedPlayers.length} players tied at ${maxRoll}, re-rolling...`);
+      tiedPlayers.forEach(p => {
+        p.roll = Math.floor(Math.random() * 6) + 1;
+      });
+      maxRoll = Math.max(...initialRolls.map(r => r.roll));
+      tiedPlayers = initialRolls.filter(r => r.roll === maxRoll);
+      rerollCount++;
+    }
+
+    // If still tied after 10 re-rolls (extremely unlikely), break tie by FID
+    if (tiedPlayers.length > 1) {
+      console.log('[create-match] Still tied after 10 re-rolls, breaking by FID');
+    }
+
+    // Sort by roll descending, ties broken by FID ascending
+    initialRolls.sort((a, b) => {
+      if (b.roll !== a.roll) return b.roll - a.roll;
+      return a.fid - b.fid;
+    });
+
+    console.log('[create-match] Final roll-off:', initialRolls);
 
     // Create match players with turn order based on roll-off
     const matchPlayersData = initialRolls.map((entry, index: number) => ({
