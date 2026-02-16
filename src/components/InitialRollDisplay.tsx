@@ -22,7 +22,10 @@ export function InitialRollDisplay({ players, onComplete }: InitialRollDisplayPr
     // Sequence: wait 500ms → show rolls → wait 2s → highlight winner → wait 1.5s → complete
     const showTimer = setTimeout(() => setShowRolls(true), 500);
     const highlightTimer = setTimeout(() => setHighlightWinner(true), 2500);
-    const completeTimer = setTimeout(() => onComplete(), 4000);
+    const completeTimer = setTimeout(() => {
+      console.log('[InitialRollDisplay] Auto-completing after 4s');
+      onComplete();
+    }, 4000);
 
     return () => {
       clearTimeout(showTimer);
