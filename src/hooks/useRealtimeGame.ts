@@ -67,6 +67,8 @@ export function useRealtimeGame(
   const gameChannelRef = useRef<RealtimeChannel | null>(null);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const MAX_RECONNECT_ATTEMPTS = 5;
   const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
   const botTurnTriggeredRef = useRef<string | null>(null);
   // Ref to always read latest game state in async callbacks (avoids stale closures)
@@ -338,14 +340,24 @@ export function useRealtimeGame(
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setConnectionStatus('connected');
+          reconnectAttemptsRef.current = 0;
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          // Only reconnect if THIS channel is still the active one
+          // Stale channels from previous subscriptions can fire errors after being replaced
+          if (gameChannelRef.current !== gameChannel) return;
           setConnectionStatus('disconnected');
-          // Auto-reconnect after 2s
-          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = setTimeout(() => {
-            debug.info('realtime', 'Attempting game channel reconnect...');
-            subscribeToGame();
-          }, 2000);
+          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            const attempt = reconnectAttemptsRef.current;
+            const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
+            reconnectAttemptsRef.current = attempt + 1;
+            if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = setTimeout(() => {
+              debug.info('realtime', `Reconnect attempt ${attempt + 1}/${MAX_RECONNECT_ATTEMPTS} (${delay}ms delay)`);
+              subscribeToGame();
+            }, delay);
+          } else {
+            debug.warn('realtime', 'Max reconnect attempts reached. Giving up.');
+          }
         }
       });
 

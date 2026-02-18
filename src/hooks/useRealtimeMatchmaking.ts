@@ -56,6 +56,8 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const isJoiningRef = useRef(false);
   const matchmakingInFlightRef = useRef(false);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const MAX_RECONNECT_ATTEMPTS = 5;
 
   // Keep currentPlayer ref updated
   useEffect(() => {
@@ -308,14 +310,23 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setConnectionStatus('connected');
+          reconnectAttemptsRef.current = 0;
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          // Only reconnect if THIS channel is still the active one
+          if (channelRef.current !== channel) return;
           setConnectionStatus('disconnected');
-          // Auto-reconnect after 2s
-          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = setTimeout(() => {
-            debug.info('matchmaking', 'Attempting queue channel reconnect...');
-            subscribeToQueue(tier);
-          }, 2000);
+          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            const attempt = reconnectAttemptsRef.current;
+            const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
+            reconnectAttemptsRef.current = attempt + 1;
+            if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = setTimeout(() => {
+              debug.info('matchmaking', `Reconnect attempt ${attempt + 1}/${MAX_RECONNECT_ATTEMPTS} (${delay}ms delay)`);
+              subscribeToQueue(tier);
+            }, delay);
+          } else {
+            debug.warn('matchmaking', 'Max reconnect attempts reached. Giving up.');
+          }
         }
       });
 

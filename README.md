@@ -105,6 +105,14 @@ Functions live in `supabase/functions/*`:
 
 Contracts are in `contracts/*` and deployed/upgraded via `scripts/*`.
 
+**Deployed on Base mainnet:**
+
+| Contract | Address |
+|----------|---------|
+| Settlement (UUPS proxy) | `0xb3E75c6957a0d0131f1F3586937e179590bBF852` |
+| Settlement V5 (impl) | `0xb9608720192C3223e6f7c82d2D4a787Cd600ce7e` |
+| $PIZZA token | `0xa821f2ee19f4f62e404c934d43eb6e5763fbdb07` |
+
 Common commands:
 
 ```bash
@@ -114,8 +122,8 @@ npm run deploy
 
 Upgrades:
 
-- `scripts/upgrade-v4.ts`: adds bot-aware settlement path
-- `scripts/upgrade-v5.js`: adds tied-match settlement path
+- `scripts/upgrade-v4.ts`: adds bot-aware settlement path (`settleBotMatch`)
+- `scripts/upgrade-v5.js`: adds tied-match settlement path (`settleTiedMatch`)
 
 ## Tester refunds (old contract)
 
