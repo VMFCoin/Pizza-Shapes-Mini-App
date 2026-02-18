@@ -758,12 +758,17 @@ export function useRealtimeGame(
   }, [matchId, fetchGameState]);
 
   // Subscribe to realtime updates (separate effect to avoid re-subscribing on every state change)
+  // Delay subscription slightly to let the matchmaking channel from the waiting room
+  // finish its teardown — both share the same underlying WebSocket connection.
   useEffect(() => {
-    if (matchId) {
+    if (!matchId) return;
+
+    const subscribeTimer = setTimeout(() => {
       subscribeToGame();
-    }
+    }, 500);
 
     return () => {
+      clearTimeout(subscribeTimer);
       if (gameChannelRef.current) {
         supabase.removeChannel(gameChannelRef.current);
       }
@@ -909,21 +914,27 @@ export function useRealtimeGame(
       debug.info('bot', `botEffect: SKIP: already triggered for ${turnKey}`);
       return;
     }
-    debug.info('bot', `botEffect: Bot is current player (index=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}). Triggering fallback in 1s...`);
+    debug.info('bot', `botEffect: Bot is current player (index=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}). Triggering fallback in 3s...`);
     botTurnTriggeredRef.current = turnKey;
 
     const timer = setTimeout(async () => {
+      // Check if the turn has already advanced (inline bot in validate-move handled it)
+      const currentState = gameStateRef.current;
+      if (currentState && currentState.turnNumber !== gameState.turnNumber) {
+        debug.info('bot', 'botEffect: Turn already advanced, skipping fallback trigger');
+        return;
+      }
       debug.info('bot', 'botEffect: Calling trigger-bot-turn (fallback)...');
       try {
         const { data, error } = await supabase.functions.invoke('trigger-bot-turn', {
           body: { matchId },
         });
-        debug.info('bot', 'botEffect: trigger-bot-turn result', { data: JSON.stringify(data), error: error });
+        debug.info('bot', 'botEffect: trigger-bot-turn result', { data: JSON.stringify(data), error: error ? String(error) : 'none' });
       } catch (err) {
         debug.error('game', '[botEffect] Failed to trigger bot turn:', err);
         botTurnTriggeredRef.current = null;
       }
-    }, 1000);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, currentPlayerFid]);
