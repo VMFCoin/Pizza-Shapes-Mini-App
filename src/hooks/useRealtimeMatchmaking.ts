@@ -29,7 +29,7 @@ interface UseRealtimeMatchmakingReturn {
   markPlayerReady: () => Promise<void>;
 }
 
-const COUNTDOWN_SECONDS = 3;
+const COUNTDOWN_SECONDS = 10;
 const MIN_PLAYERS_TO_START = 2;
 // Queue entries older than 5 minutes are considered stale
 const STALE_ENTRY_MS = 5 * 60 * 1000;
@@ -478,15 +478,16 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   }, [isInQueue, isMatchReady]);
 
   // === MATCHMAKING TRIGGER ===
-  // When this player is ready, trigger matchmaking immediately, then retry every 3s.
+  // When this player is ready, wait 5s before first attempt to give more players
+  // a chance to join, then retry every 3s.
   useEffect(() => {
     if (!isCurrentPlayerReady || isMatchReady || !isInQueue) return;
 
-    // Trigger matchmaking immediately (tiny delay for state propagation)
+    // Wait 5 seconds before first matchmaking attempt
     const initialDelay = setTimeout(() => {
       if (isMatchReady) return;
       triggerMatchmaking(selectedTier);
-    }, 500);
+    }, 5000);
 
     // Then retry every few seconds in case more players became ready
     const retryInterval = setInterval(() => {
