@@ -16,6 +16,8 @@ interface UseRealtimeMatchmakingReturn {
   queuePlayers: QueuePlayer[];
   matchId: MatchID | undefined;
   isMatchReady: boolean;
+  canNavigateToGame: boolean;
+  matchFoundCountdown: number | null;
   countdown: number | null;
   selectedTier: number;
   queuePosition: number | null;
@@ -29,7 +31,8 @@ interface UseRealtimeMatchmakingReturn {
   markPlayerReady: () => Promise<void>;
 }
 
-const COUNTDOWN_SECONDS = 5;
+const COUNTDOWN_SECONDS = 60;
+const MATCH_FOUND_COUNTDOWN = 10;
 const MIN_PLAYERS_TO_START = 2;
 // Queue entries older than 5 minutes are considered stale
 const STALE_ENTRY_MS = 5 * 60 * 1000;
@@ -47,10 +50,13 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [isCurrentPlayerReady, setIsCurrentPlayerReady] = useState(false);
+  const [canNavigateToGame, setCanNavigateToGame] = useState(false);
+  const [matchFoundCountdown, setMatchFoundCountdown] = useState<number | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const queueEntryIdRef = useRef<string | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const matchFoundTimerRef = useRef<NodeJS.Timeout | null>(null);
   const currentPlayerRef = useRef<Player | null>(currentPlayer);
   const previousPlayerCountRef = useRef<number>(0);
   const isJoiningRef = useRef(false);
@@ -408,10 +414,16 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
+      if (matchFoundTimerRef.current) {
+        clearInterval(matchFoundTimerRef.current);
+        matchFoundTimerRef.current = null;
+      }
       setIsInQueue(false);
       setQueuePlayers([]);
       setMatchId(undefined);
       setIsMatchReady(false);
+      setCanNavigateToGame(false);
+      setMatchFoundCountdown(null);
       setCountdown(null);
       setQueuePosition(null);
       setConnectionStatus('disconnected');
@@ -442,6 +454,9 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       }
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
+      }
+      if (matchFoundTimerRef.current) {
+        clearInterval(matchFoundTimerRef.current);
       }
     };
   }, []);
@@ -503,11 +518,48 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     };
   }, [isCurrentPlayerReady, isMatchReady, isInQueue, selectedTier, triggerMatchmaking]);
 
+  // === MATCH FOUND COUNTDOWN ===
+  // When a match is found, give 10 seconds for additional players to join before navigating
+  useEffect(() => {
+    if (!isMatchReady || !matchId) return;
+
+    debug.info('matchmaking', `Match found! Starting ${MATCH_FOUND_COUNTDOWN}s countdown for others to join`);
+    setMatchFoundCountdown(MATCH_FOUND_COUNTDOWN);
+
+    // Stop the main waiting room countdown
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    let remaining = MATCH_FOUND_COUNTDOWN;
+    matchFoundTimerRef.current = setInterval(() => {
+      remaining -= 1;
+      setMatchFoundCountdown(remaining);
+      if (remaining <= 0) {
+        if (matchFoundTimerRef.current) {
+          clearInterval(matchFoundTimerRef.current);
+          matchFoundTimerRef.current = null;
+        }
+        setCanNavigateToGame(true);
+      }
+    }, 1000);
+
+    return () => {
+      if (matchFoundTimerRef.current) {
+        clearInterval(matchFoundTimerRef.current);
+        matchFoundTimerRef.current = null;
+      }
+    };
+  }, [isMatchReady, matchId]);
+
   return {
     isInQueue,
     queuePlayers,
     matchId,
     isMatchReady,
+    canNavigateToGame,
+    matchFoundCountdown,
     countdown,
     selectedTier,
     queuePosition,

@@ -51,6 +51,8 @@ function WaitingRoomContent() {
     queuePlayers,
     matchId,
     isMatchReady,
+    canNavigateToGame,
+    matchFoundCountdown,
     countdown,
     queuePosition,
     error,
@@ -102,12 +104,12 @@ function WaitingRoomContent() {
     }
   }, [currentPlayer, tier, router]);
 
-  // Navigate to game when a real match is created by server-side matchmaking
+  // Navigate to game after match found countdown expires
   useEffect(() => {
-    if (isMatchReady && matchId) {
+    if (canNavigateToGame && matchId) {
       router.push(`/game?matchId=${matchId}&tier=${tier}`);
     }
-  }, [isMatchReady, matchId, tier, router]);
+  }, [canNavigateToGame, matchId, tier, router]);
 
   // When countdown reaches 0:
   // - 1 ready player: add bot opponent and start
@@ -224,19 +226,23 @@ function WaitingRoomContent() {
             >
               {"🍕"}
             </motion.div>
-            <h2 
+            <h2
               className="text-xl font-bold mb-2 text-game-light"
               style={{ fontFamily: 'var(--font-lilita), cursive' }}
             >
-              {countdown !== null && countdown > 0
-                ? `Game starts in ${countdown}s`
-                : countdown === 0
-                  ? (botError
-                    ? 'Bot setup failed'
-                    : isAddingBot
-                      ? 'Adding bot opponent...'
-                      : isCurrentPlayerReady ? 'Starting...' : "Time's up!")
-                  : 'Finding Players...'}
+              {isMatchReady && matchFoundCountdown !== null
+                ? (matchFoundCountdown > 0
+                  ? `Match Found! Starting in ${matchFoundCountdown}s`
+                  : 'Starting game...')
+                : countdown !== null && countdown > 0
+                  ? `Game starts in ${countdown}s`
+                  : countdown === 0
+                    ? (botError
+                      ? 'Bot setup failed'
+                      : isAddingBot
+                        ? 'Adding bot opponent...'
+                        : isCurrentPlayerReady ? 'Starting...' : "Time's up!")
+                    : 'Finding Players...'}
             </h2>
             <p className="text-stone-400 text-sm">
               {currentTier?.label} tier - {currentTier?.description}
@@ -273,7 +279,23 @@ function WaitingRoomContent() {
                 </button>
               </div>
             )}
-            {countdown !== null && countdown > 0 && (
+            {/* Match found countdown (green) or waiting countdown (orange) */}
+            {isMatchReady && matchFoundCountdown !== null && matchFoundCountdown > 0 ? (
+              <motion.div
+                className="mt-4 inline-flex items-center justify-center w-16 h-16 rounded-xl text-3xl font-bold"
+                style={{
+                  background: 'linear-gradient(180deg, #58D68D 0%, #46AB71 100%)',
+                  boxShadow: '0 4px 0 0 #2D7A4E, 0 6px 16px rgba(88, 214, 141, 0.3)',
+                  color: '#FFF',
+                  fontFamily: 'var(--font-lilita), cursive',
+                }}
+                key={`match-${matchFoundCountdown}`}
+                initial={{ scale: 1.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+              >
+                {matchFoundCountdown}
+              </motion.div>
+            ) : countdown !== null && countdown > 0 && !isMatchReady ? (
               <motion.div
                 className="mt-4 inline-flex items-center justify-center w-16 h-16 rounded-xl text-3xl font-bold"
                 style={{
@@ -282,13 +304,13 @@ function WaitingRoomContent() {
                   color: '#1C1917',
                   fontFamily: 'var(--font-lilita), cursive',
                 }}
-                key={countdown}
+                key={`wait-${countdown}`}
                 initial={{ scale: 1.3, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
               >
                 {countdown}
               </motion.div>
-            )}
+            ) : null}
           </motion.div>
 
           {/* Players list */}
