@@ -30,6 +30,11 @@ function GameContent() {
   const tierConfig = ENTRY_TIERS.find(t => t.id === tier);
   const gridSize = tierConfig?.gridSize || 4;
 
+  // Initial roll display state — must be declared before useRealtimeGame
+  // so hasSeenInitialRolls can gate the turn timer
+  const [showInitialRolls, setShowInitialRolls] = useState(true);
+  const [hasSeenInitialRolls, setHasSeenInitialRolls] = useState(false);
+
   const {
     gameState,
     gamePhase,
@@ -46,7 +51,7 @@ function GameContent() {
     isGameOver,
     winner,
     turnTimeRemaining,
-  } = useRealtimeGame(matchId, context?.fid || null);
+  } = useRealtimeGame(matchId, context?.fid || null, hasSeenInitialRolls);
 
   const [isRolling, setIsRolling] = useState(false);
   const [hasRolled, setHasRolled] = useState(false);
@@ -62,8 +67,6 @@ function GameContent() {
     sliceCount: number;
   } | null>(null);
   const [captureStreak, setCaptureStreak] = useState(0);
-  const [showInitialRolls, setShowInitialRolls] = useState(true);
-  const [hasSeenInitialRolls, setHasSeenInitialRolls] = useState(false);
 
   // Check if we should show initial rolls (only if all players have initialRoll set and we haven't seen them yet)
   const shouldShowInitialRolls =
@@ -74,6 +77,20 @@ function GameContent() {
     gameState.players.every(p => p.initialRoll !== undefined && p.initialRoll !== null) &&
     gameState.turnNumber === 1 &&
     showInitialRolls;
+
+  // Skip initial roll display if no roll data available (e.g., rejoining a game, turn > 1)
+  // This ensures the turn timer starts immediately for games without initial rolls.
+  useEffect(() => {
+    if (hasSeenInitialRolls) return;
+    if (!gameState || isLoading) return;
+
+    const hasRollData = gameState.players.length > 0 &&
+      gameState.players.every(p => p.initialRoll !== undefined && p.initialRoll !== null);
+
+    if (!hasRollData || gameState.turnNumber !== 1) {
+      setHasSeenInitialRolls(true);
+    }
+  }, [hasSeenInitialRolls, gameState, isLoading]);
 
   // Navigate to game over when game ends
   useEffect(() => {

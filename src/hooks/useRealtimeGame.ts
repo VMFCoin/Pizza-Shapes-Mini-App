@@ -47,7 +47,9 @@ const TURN_TIME_LIMIT = 60; // 60 seconds per turn
 
 export function useRealtimeGame(
   matchId: MatchID | null,
-  currentPlayerFid: number | null
+  currentPlayerFid: number | null,
+  /** Set to false while showing initial roll display — delays turn timer start */
+  gameReady: boolean = true
 ): UseRealtimeGameReturn {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhase>('waiting');
@@ -826,7 +828,7 @@ export function useRealtimeGame(
       turnTimerRef.current = null;
     }
 
-    if (!gameState || gameState.gameOver || !matchId) {
+    if (!gameState || gameState.gameOver || !matchId || !gameReady) {
       setTurnTimeRemaining(null);
       return;
     }
@@ -839,7 +841,7 @@ export function useRealtimeGame(
     }
 
     // Start countdown — visible to everyone
-    debug.info('timer', `timer: Starting 60s countdown. playerIndex=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}`);
+    debug.info('timer', `timer: Starting ${TURN_TIME_LIMIT}s countdown. playerIndex=${gameState.currentPlayerIndex}, turn=${gameState.turnNumber}`);
     setTurnTimeRemaining(TURN_TIME_LIMIT);
 
     turnTimerRef.current = setInterval(() => {
@@ -877,9 +879,10 @@ export function useRealtimeGame(
       }
     };
     // Only restart timer when the turn actually changes (player index or turn number),
-    // NOT when endTurn/isMyTurn function references change
+    // NOT when endTurn/isMyTurn function references change.
+    // gameReady gates timer start until initial roll display is dismissed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId]);
+  }, [gameState?.currentPlayerIndex, gameState?.turnNumber, gameState?.gameOver, matchId, gameReady]);
 
   // Auto-trigger bot turns when current player is a bot (CLIENT FALLBACK).
   // The server-side inline bot in validate-move is the primary mechanism.
