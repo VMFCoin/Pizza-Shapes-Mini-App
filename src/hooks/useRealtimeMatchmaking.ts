@@ -55,10 +55,6 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const previousPlayerCountRef = useRef<number>(0);
   const isJoiningRef = useRef(false);
   const matchmakingInFlightRef = useRef(false);
-  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef<number>(0);
-  const MAX_RECONNECT_ATTEMPTS = 5;
-
   // Keep currentPlayer ref updated
   useEffect(() => {
     currentPlayerRef.current = currentPlayer;
@@ -308,25 +304,13 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         }
       )
       .subscribe((status) => {
+        debug.info('matchmaking', `Queue channel status: ${status}`);
         if (status === 'SUBSCRIBED') {
           setConnectionStatus('connected');
-          reconnectAttemptsRef.current = 0;
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          // Only reconnect if THIS channel is still the active one
-          if (channelRef.current !== channel) return;
+          // Don't auto-reconnect — Supabase client handles transport-level reconnection.
+          // Manual reconnect was creating duplicate channels that loop-errored.
           setConnectionStatus('disconnected');
-          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-            const attempt = reconnectAttemptsRef.current;
-            const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
-            reconnectAttemptsRef.current = attempt + 1;
-            if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-            reconnectTimerRef.current = setTimeout(() => {
-              debug.info('matchmaking', `Reconnect attempt ${attempt + 1}/${MAX_RECONNECT_ATTEMPTS} (${delay}ms delay)`);
-              subscribeToQueue(tier);
-            }, delay);
-          } else {
-            debug.warn('matchmaking', 'Max reconnect attempts reached. Giving up.');
-          }
         }
       });
 
@@ -424,10 +408,6 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
       setIsInQueue(false);
       setQueuePlayers([]);
       setMatchId(undefined);
@@ -462,9 +442,6 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       }
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
-      }
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
       }
     };
   }, []);
