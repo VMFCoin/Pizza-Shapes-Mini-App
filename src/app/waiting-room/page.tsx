@@ -443,20 +443,33 @@ function WaitingRoomContent() {
 
           {/* Enter Game / Ready button - Keycap style */}
           {isCurrentPlayerReady ? (
-            <motion.div
+            <motion.button
+              onClick={() => {
+                if (isMatchReady && matchId) {
+                  router.push(`/game?matchId=${matchId}&tier=${tier}`);
+                }
+              }}
               className="w-full py-4 rounded-xl font-bold text-lg text-center"
               style={{
-                background: 'linear-gradient(180deg, #58D68D 0%, #46AB71 100%)',
+                background: isMatchReady && matchId
+                  ? 'linear-gradient(180deg, #58D68D 0%, #46AB71 100%)'
+                  : 'linear-gradient(180deg, #58D68D 0%, #46AB71 100%)',
                 boxShadow: '0 3px 0 0 #2D7A4E, 0 4px 12px rgba(88, 214, 141, 0.3)',
                 color: '#FFF',
+                cursor: isMatchReady && matchId ? 'pointer' : 'default',
               }}
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
+              whileTap={isMatchReady && matchId ? { scale: 0.96, y: 2 } : {}}
             >
               <span className="flex items-center justify-center gap-2">
-                <span>{"✓"}</span> Ready!
+                {isMatchReady && matchId ? (
+                  <>Start Match!</>
+                ) : (
+                  <><span>{"✓"}</span> Ready!</>
+                )}
               </span>
-            </motion.div>
+            </motion.button>
           ) : (
             <div>
               <motion.button
