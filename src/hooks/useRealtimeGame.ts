@@ -220,13 +220,14 @@ export function useRealtimeGame(
 
     setGameState(prev => {
       if (!prev) return prev;
+      // Use nullish coalescing — Realtime payloads may omit unchanged fields
       const updated = {
         ...prev,
-        edges: newState.edges as Edge[],
-        possibleSlices: newState.possible_slices as PizzaSlice[],
-        capturedSlices: newState.captured_slices as PizzaSlice[],
-        diceRoll: newState.dice_roll,
-        movesRemaining: newState.moves_remaining,
+        edges: (newState.edges as Edge[] | undefined) ?? prev.edges,
+        possibleSlices: (newState.possible_slices as PizzaSlice[] | undefined) ?? prev.possibleSlices,
+        capturedSlices: (newState.captured_slices as PizzaSlice[] | undefined) ?? prev.capturedSlices,
+        diceRoll: newState.dice_roll !== undefined ? newState.dice_roll : prev.diceRoll,
+        movesRemaining: newState.moves_remaining !== undefined ? newState.moves_remaining : prev.movesRemaining,
       };
 
       // Update phase based on moves remaining (rolling vs drawing).
@@ -257,14 +258,15 @@ export function useRealtimeGame(
 
     setGameState(prev => {
       if (!prev) return prev;
-      const playerAtIndex = prev.players[match.current_player_index];
+      const currentPlayerIdx = match.current_player_index ?? prev.currentPlayerIndex;
+      const playerAtIndex = prev.players[currentPlayerIdx];
       debug.info('game', `RT matches: Next player: ${playerAtIndex?.displayName} (fid=${playerAtIndex?.fid}, isBot=${playerAtIndex?.isBot})`);
       const updated = {
         ...prev,
-        currentPlayerIndex: match.current_player_index,
-        turnNumber: match.turn_number,
+        currentPlayerIndex: currentPlayerIdx,
+        turnNumber: match.turn_number ?? prev.turnNumber,
         gameOver: match.status === 'completed',
-        winner: match.winner_fid ? `player_${match.winner_fid}` : null,
+        winner: match.winner_fid ? `player_${match.winner_fid}` : prev.winner,
       };
       const newPhase = determinePhase(updated, match.status);
       debug.info('game', `RT matches: Phase: ${newPhase}`);
@@ -735,8 +737,8 @@ export function useRealtimeGame(
   const mergedGameState = useMemo(() => {
     if (!gameState) return null;
 
-    // Apply optimistic edge claims
-    const mergedEdges = gameState.edges.map(edge => {
+    // Apply optimistic edge claims (guard against undefined edges from partial payloads)
+    const mergedEdges = (gameState.edges ?? []).map(edge => {
       const optimisticClaim = optimisticEdges.get(edge.id);
       if (optimisticClaim) {
         return { ...edge, claimedBy: optimisticClaim };
