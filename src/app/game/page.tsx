@@ -480,34 +480,45 @@ function GameContent() {
             </div>
           )}
 
-          {/* Drawing phase — only show when dice animation and result display are done */}
-          {!isRolling && !showDiceResult && gamePhase === 'drawing' && isMyTurn && (
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span 
-                  className="number-badge"
-                  style={{
-                    background: 'linear-gradient(180deg, #4ECDC4 0%, #3EA89D 100%)',
-                    color: '#1C1917',
-                    boxShadow: '0 2px 0 0 #2D7A73',
-                  }}
-                >
-                  {gameState.movesRemaining}
-                </span>
-                <span className="text-stone-400 font-medium">
-                  move{gameState.movesRemaining !== 1 ? 's' : ''} remaining
-                </span>
-              </div>
+          {/* Drawing phase — show End Turn card after dice result disappears */}
+          {!isRolling && !showDiceResult && (gamePhase === 'drawing' || gamePhase === 'capturing') && isMyTurn && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center gap-3"
+            >
+              {gameState.movesRemaining > 0 && (
+                <div className="flex items-center gap-2">
+                  <span
+                    className="number-badge"
+                    style={{
+                      background: 'linear-gradient(180deg, #4ECDC4 0%, #3EA89D 100%)',
+                      color: '#1C1917',
+                      boxShadow: '0 2px 0 0 #2D7A73',
+                    }}
+                  >
+                    {gameState.movesRemaining}
+                  </span>
+                  <span className="text-stone-400 font-medium">
+                    move{gameState.movesRemaining !== 1 ? 's' : ''} remaining — tap a line!
+                  </span>
+                </div>
+              )}
               <motion.button
                 onClick={handleEndTurn}
-                className="btn-secondary px-8"
+                className="w-full py-3 rounded-xl font-bold text-lg"
+                style={{
+                  background: 'linear-gradient(180deg, #FF8C5A 0%, #FF6B35 100%)',
+                  color: '#FFF',
+                  boxShadow: '0 3px 0 0 #CC5429, 0 4px 12px rgba(255, 107, 53, 0.4)',
+                }}
                 whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.96, y: 2 }}
                 disabled={connectionStatus !== 'connected'}
               >
                 End Turn
               </motion.button>
-            </div>
+            </motion.div>
           )}
 
           {/* Waiting for opponent — hide while dice is still animating or showing result */}
