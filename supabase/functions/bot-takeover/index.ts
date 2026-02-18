@@ -160,8 +160,9 @@ async function executeBotTurn(supabase: any, matchId: string, botFid: number) {
 
     const currentEdges = latestState.edges as Edge[];
     const currentSlices = latestState.possible_slices as PizzaSlice[];
+    const currentCaptured = (latestState.captured_slices || []) as PizzaSlice[];
 
-    const bestEdgeId = chooseBestEdge(currentEdges, currentSlices, botPlayerId);
+    const bestEdgeId = chooseBestEdge(currentEdges, currentSlices, botPlayerId, currentCaptured);
     if (!bestEdgeId) break;
 
     try {

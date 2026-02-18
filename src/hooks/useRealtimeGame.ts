@@ -534,6 +534,7 @@ export function useRealtimeGame(
 
       // Optimistically update movesRemaining from server response and add captures
       // so the score counter updates immediately (instead of waiting for realtime).
+      // capturedSlices is also used by canDrawEdge to lock edges of sealed pizzas.
       if (captured.length > 0) {
         const playerId = `player_${currentPlayerFid}`;
         setGameState(prev => {
@@ -718,6 +719,14 @@ export function useRealtimeGame(
     // Check both server state and optimistic state
     if (edge.claimedBy !== null) return false;
     if (optimisticEdges.has(edgeId)) return false;
+
+    // Block edges that belong to any captured slice — once a pizza is sealed,
+    // its edges are locked and can't participate in completing other triangles.
+    // Uses capturedSlices (which gets optimistic updates) for instant feedback.
+    const isSealed = gameState.capturedSlices.some(
+      slice => slice.edgeIds.includes(edgeId)
+    );
+    if (isSealed) return false;
 
     return true;
   }, [gameState, isMyTurn, optimisticEdges]);

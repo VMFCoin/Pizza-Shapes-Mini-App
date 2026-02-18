@@ -16,9 +16,20 @@ import { Edge, PizzaSlice, EdgeID } from './gridUtils.ts';
 export function chooseBestEdge(
   edges: Edge[],
   possibleSlices: PizzaSlice[],
-  _botPlayerId: string
+  _botPlayerId: string,
+  capturedSlices?: PizzaSlice[]
 ): EdgeID | null {
-  const availableEdges = edges.filter(e => e.claimedBy === null);
+  // Build set of sealed edges (edges belonging to captured slices)
+  const sealedEdges = new Set<string>();
+  if (capturedSlices) {
+    for (const slice of capturedSlices) {
+      for (const edgeId of slice.edgeIds) {
+        sealedEdges.add(edgeId);
+      }
+    }
+  }
+
+  const availableEdges = edges.filter(e => e.claimedBy === null && !sealedEdges.has(e.id));
   if (availableEdges.length === 0) return null;
 
   let bestEdgeId: EdgeID | null = null;

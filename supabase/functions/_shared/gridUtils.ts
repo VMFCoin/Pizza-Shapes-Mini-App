@@ -129,6 +129,14 @@ export function findAllPossibleSlices(nodes: Node[], edges: Edge[]): PizzaSlice[
   return slices;
 }
 
+// Check if an edge can still contribute to capturing an uncaptured slice.
+// Returns false if every possible triangle containing this edge is already captured.
+export function isEdgeUseful(edgeId: EdgeID, possibleSlices: PizzaSlice[]): boolean {
+  return possibleSlices.some(slice =>
+    slice.edgeIds.includes(edgeId) && slice.capturedBy === null
+  );
+}
+
 // Check if a slice is completed (all three edges claimed)
 export function isSliceCompleted(slice: PizzaSlice, edges: Edge[]): boolean {
   return slice.edgeIds.every(edgeId => {
@@ -150,18 +158,37 @@ export function findNewlyCompletedSlices(
   });
 }
 
-// Count available moves (unclaimed edges)
-export function countAvailableMoves(edges: Edge[]): number {
-  return edges.filter(e => e.claimedBy === null).length;
+// Count available moves (unclaimed edges that aren't sealed by captured slices)
+export function countAvailableMoves(edges: Edge[], capturedSlices?: PizzaSlice[]): number {
+  return edges.filter(e => {
+    if (e.claimedBy !== null) return false;
+    if (capturedSlices) {
+      const isSealed = capturedSlices.some(s => s.edgeIds.includes(e.id));
+      if (isSealed) return false;
+    }
+    return true;
+  }).length;
 }
 
-// Check if any uncaptured slices can still be completed
-export function hasRemainingSlices(possibleSlices: PizzaSlice[], edges: Edge[]): boolean {
+// Check if any uncaptured slices can still be completed.
+// Edges that belong to captured slices are considered sealed and unavailable.
+export function hasRemainingSlices(possibleSlices: PizzaSlice[], edges: Edge[], capturedSlices?: PizzaSlice[]): boolean {
+  // Build a set of sealed edge IDs (edges belonging to captured slices)
+  const sealedEdges = new Set<string>();
+  if (capturedSlices) {
+    for (const slice of capturedSlices) {
+      for (const edgeId of slice.edgeIds) {
+        sealedEdges.add(edgeId);
+      }
+    }
+  }
+
   return possibleSlices.some(slice => {
     if (slice.capturedBy !== null) return false;
+    // At least one edge must be unclaimed AND not sealed
     return slice.edgeIds.some(edgeId => {
       const edge = edges.find(e => e.id === edgeId);
-      return edge && edge.claimedBy === null;
+      return edge && edge.claimedBy === null && !sealedEdges.has(edgeId);
     });
   });
 }

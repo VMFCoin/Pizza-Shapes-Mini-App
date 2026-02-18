@@ -81,7 +81,7 @@ export function useGameState(): UseGameStateReturn {
     if (!gameState || gameState.gameOver) return 0;
 
     const roll = Math.floor(Math.random() * 6) + 1;
-    const availableMoves = countAvailableMoves(gameState.edges);
+    const availableMoves = countAvailableMoves(gameState.edges, gameState.capturedSlices);
 
     // If roll is higher than available moves, skip turn
     if (roll > availableMoves) {
@@ -167,7 +167,7 @@ export function useGameState(): UseGameStateReturn {
         const newMovesRemaining = prev.movesRemaining - 1;
 
         // Check game end condition
-        const gameEnded = !hasRemainingSlices(updatedPossibleSlices, updatedEdges);
+        const gameEnded = !hasRemainingSlices(updatedPossibleSlices, updatedEdges, newCapturedSlices);
         const winnerResult = gameEnded
           ? determineWinner(prev.players, newCapturedSlices)
           : null;
@@ -206,7 +206,7 @@ export function useGameState(): UseGameStateReturn {
       if (!prev) return prev;
 
       // Check game end condition
-      if (!hasRemainingSlices(prev.possibleSlices, prev.edges)) {
+      if (!hasRemainingSlices(prev.possibleSlices, prev.edges, prev.capturedSlices)) {
         const winnerResult = determineWinner(prev.players, prev.capturedSlices);
         return {
           ...prev,

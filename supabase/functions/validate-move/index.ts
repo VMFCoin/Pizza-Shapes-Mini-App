@@ -229,18 +229,18 @@ async function handleRollDice(supabase: any, match: any, gameState: any, readVer
       diceRoll: gameState.dice_roll,
       movesRemaining: gameState.moves_remaining,
       turnSkipped: false,
-      availableMoves: countAvailableMoves(gameState.edges as Edge[]),
+      availableMoves: countAvailableMoves(gameState.edges as Edge[], gameState.captured_slices as PizzaSlice[]),
       alreadyRolled: true,
     };
   }
 
   const edges = gameState.edges as Edge[];
   const possibleSlices = gameState.possible_slices as PizzaSlice[];
+  const capturedSlices = gameState.captured_slices as PizzaSlice[];
 
   // Check if the game should end — no remaining slices means no point rolling.
-  if (!hasRemainingSlices(possibleSlices, edges)) {
+  if (!hasRemainingSlices(possibleSlices, edges, capturedSlices)) {
     const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
-    const capturedSlices = gameState.captured_slices as PizzaSlice[];
     const result = determineWinner(players, capturedSlices);
     const winnerFid = result.winnerId ? parseInt(result.winnerId.replace('player_', '')) : null;
 
@@ -261,7 +261,7 @@ async function handleRollDice(supabase: any, match: any, gameState: any, readVer
   }
 
   const roll = Math.floor(Math.random() * 6) + 1;
-  const availableMoves = countAvailableMoves(edges);
+  const availableMoves = countAvailableMoves(edges, capturedSlices);
 
   // If roll is higher than available moves, skip turn
   if (roll > availableMoves) {
@@ -351,6 +351,15 @@ async function handleDrawEdge(
     throw new Error('Edge already claimed');
   }
 
+  // Block edges that belong to any captured slice — once a pizza is sealed,
+  // its edges are locked and can't participate in completing other triangles.
+  const isPartOfCapturedSlice = capturedSlices.some(
+    (s: PizzaSlice) => s.edgeIds.includes(edgeId)
+  );
+  if (isPartOfCapturedSlice) {
+    throw new Error('Edge is part of a completed pizza slice');
+  }
+
   // Validate moves remaining
   if (gameState.moves_remaining <= 0) {
     throw new Error('No moves remaining');
@@ -382,7 +391,7 @@ async function handleDrawEdge(
   const newMovesRemaining = gameState.moves_remaining - 1 + (extraTurn ? 1 : 0);
 
   // Check game end condition
-  const gameEnded = !hasRemainingSlices(updatedPossibleSlices, updatedEdges);
+  const gameEnded = !hasRemainingSlices(updatedPossibleSlices, updatedEdges, newCapturedSlices);
 
   if (gameEnded) {
     // Determine winner
@@ -440,7 +449,7 @@ async function handleEndTurn(supabase: any, match: any, gameState: any, readVers
   const capturedSlices = gameState.captured_slices as PizzaSlice[];
 
   // Check game end condition
-  const gameEnded = !hasRemainingSlices(possibleSlices, edges);
+  const gameEnded = !hasRemainingSlices(possibleSlices, edges, capturedSlices);
 
   if (gameEnded) {
     const players = match.match_players.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
@@ -534,10 +543,10 @@ async function executeBotTurn(
   let edges = effectiveState.edges as Edge[];
   let possibleSlices = effectiveState.possible_slices as PizzaSlice[];
   let capturedSlices = effectiveState.captured_slices as PizzaSlice[];
-  const availableMoves = countAvailableMoves(edges);
+  const availableMoves = countAvailableMoves(edges, capturedSlices);
 
   // Check if game should end (no remaining slices)
-  if (!hasRemainingSlices(possibleSlices, edges)) {
+  if (!hasRemainingSlices(possibleSlices, edges, capturedSlices)) {
     console.log('[bot-inline] No remaining slices, ending game');
     const players = sortedPlayers.map((mp: any) => ({ id: `player_${mp.player_fid}` }));
     const result = determineWinner(players, capturedSlices);
@@ -573,7 +582,7 @@ async function executeBotTurn(
   let movesPlayed = 0;
 
   while (movesRemaining > 0) {
-    const bestEdgeId = chooseBestEdge(edges, possibleSlices, botPlayerId);
+    const bestEdgeId = chooseBestEdge(edges, possibleSlices, botPlayerId, capturedSlices);
     if (!bestEdgeId) break;
 
     // Claim the edge in memory
@@ -599,7 +608,7 @@ async function executeBotTurn(
     movesPlayed++;
 
     // Check game end
-    if (!hasRemainingSlices(possibleSlices, edges)) {
+    if (!hasRemainingSlices(possibleSlices, edges, capturedSlices)) {
       console.log(`[bot-inline] Game ended during bot turn after ${movesPlayed} moves`);
       // Write final state and end game
       await supabase.from('game_states').update({

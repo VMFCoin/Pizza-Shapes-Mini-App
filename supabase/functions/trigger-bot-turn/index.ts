@@ -144,9 +144,10 @@ serve(async (req) => {
 
       const edges = gameState.edges as Edge[];
       const possibleSlices = gameState.possible_slices as PizzaSlice[];
+      const capturedSlices = (gameState.captured_slices || []) as PizzaSlice[];
 
       // Use intelligent strategy to pick best edge
-      const bestEdgeId = chooseBestEdge(edges, possibleSlices, botPlayerId);
+      const bestEdgeId = chooseBestEdge(edges, possibleSlices, botPlayerId, capturedSlices);
 
       if (!bestEdgeId) {
         break; // No available edges

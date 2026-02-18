@@ -468,8 +468,10 @@ function GameContent() {
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-3 pb-4 bg-gradient-to-t from-game-dark via-game-dark to-transparent safe-area-bottom">
         <div className="card p-4">
           {/* Dice roll phase — keep visible while isRolling OR showDiceResult so
-              animation completes and result is briefly visible (even on turn skip) */}
-          {(isRolling || showDiceResult || (gamePhase === 'rolling' && isMyTurn)) && (
+              animation completes and result is briefly visible (even on turn skip).
+              Once hasRolled, don't re-show the dice card even if gamePhase is still 'rolling'
+              (delayed realtime) — show the End Turn button instead. */}
+          {(isRolling || showDiceResult || (gamePhase === 'rolling' && isMyTurn && !hasRolled)) && (
             <div className="flex flex-col items-center">
               <Dice
                 value={diceResultRef.current ?? gameState.diceRoll}
@@ -480,8 +482,10 @@ function GameContent() {
             </div>
           )}
 
-          {/* Drawing phase — show End Turn card after dice result disappears */}
-          {!isRolling && !showDiceResult && (gamePhase === 'drawing' || gamePhase === 'capturing') && isMyTurn && (
+          {/* Drawing phase — show End Turn button as soon as phase is drawing/capturing,
+              even if dice result is still briefly visible. Also show when hasRolled but
+              gamePhase hasn't transitioned from 'rolling' yet (delayed realtime). */}
+          {!isRolling && (gamePhase === 'drawing' || gamePhase === 'capturing' || (gamePhase === 'rolling' && hasRolled)) && isMyTurn && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
