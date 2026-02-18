@@ -124,6 +124,49 @@ export function findAllPossibleSlices(nodes: Node[], edges: Edge[]): PizzaSlice[
   return slices;
 }
 
+// Parse grid coordinates from a node ID like "node_3_2" → { x: 3, y: 2 }
+function parseNodeCoords(nodeId: NodeID): { x: number; y: number } {
+  const parts = nodeId.split('_');
+  return { x: parseInt(parts[1]), y: parseInt(parts[2]) };
+}
+
+// Find the crossing diagonal edge ID for a given diagonal edge.
+// In each grid cell, the \ and / diagonals visually cross.
+// Returns null if the edge is not diagonal.
+export function getCrossingDiagonal(edgeId: EdgeID, edges: Edge[]): EdgeID | null {
+  const edge = edges.find(e => e.id === edgeId);
+  if (!edge) return null;
+
+  const a = parseNodeCoords(edge.nodeA);
+  const b = parseNodeCoords(edge.nodeB);
+
+  // Only diagonals cross — horizontal/vertical edges don't
+  const dx = Math.abs(a.x - b.x);
+  const dy = Math.abs(a.y - b.y);
+  if (dx !== 1 || dy !== 1) return null;
+
+  // The crossing diagonal connects the other two corners of the same cell
+  const minX = Math.min(a.x, b.x);
+  const minY = Math.min(a.y, b.y);
+
+  // Current edge is either (minX,minY)-(minX+1,minY+1) backslash \
+  //                     or (minX+1,minY)-(minX,minY+1) forward slash /
+  // The crossing edge is the other one
+  const crossA = `node_${minX + 1}_${minY}`;
+  const crossB = `node_${minX}_${minY + 1}`;
+  const crossId1 = getEdgeId(crossA, crossB);
+
+  if (crossId1 === edgeId) {
+    // Current is /, crossing is \
+    const bsA = `node_${minX}_${minY}`;
+    const bsB = `node_${minX + 1}_${minY + 1}`;
+    return getEdgeId(bsA, bsB);
+  } else {
+    // Current is \, crossing is /
+    return crossId1;
+  }
+}
+
 // Check if an edge can still contribute to capturing an uncaptured slice.
 // Returns false if every possible triangle containing this edge is already captured
 // (i.e., drawing it would be visually overlapping sealed pizza slices with no benefit).
@@ -173,7 +216,7 @@ export function getSlicePath(slice: PizzaSlice, nodes: Node[]): string {
   return `M ${sliceNodes[0].x} ${sliceNodes[0].y} L ${sliceNodes[1].x} ${sliceNodes[1].y} L ${sliceNodes[2].x} ${sliceNodes[2].y} Z`;
 }
 
-// Count available moves (unclaimed edges that aren't sealed by captured slices)
+// Count available moves (unclaimed edges that aren't sealed or blocked by crossing diagonals)
 export function countAvailableMoves(edges: Edge[], capturedSlices?: PizzaSlice[]): number {
   return edges.filter(e => {
     if (e.claimedBy !== null) return false;
@@ -181,12 +224,19 @@ export function countAvailableMoves(edges: Edge[], capturedSlices?: PizzaSlice[]
       const isSealed = capturedSlices.some(s => s.edgeIds.includes(e.id));
       if (isSealed) return false;
     }
+    // Block diagonals whose crossing diagonal is already claimed
+    const crossingId = getCrossingDiagonal(e.id, edges);
+    if (crossingId) {
+      const crossingEdge = edges.find(ce => ce.id === crossingId);
+      if (crossingEdge && crossingEdge.claimedBy !== null) return false;
+    }
     return true;
   }).length;
 }
 
 // Check if any uncaptured slices can still be completed.
 // Edges that belong to captured slices are considered sealed and unavailable.
+// Edges blocked by a crossing diagonal are also unavailable.
 export function hasRemainingSlices(possibleSlices: PizzaSlice[], edges: Edge[], capturedSlices?: PizzaSlice[]): boolean {
   // Build a set of sealed edge IDs (edges belonging to captured slices)
   const sealedEdges = new Set<string>();
@@ -198,13 +248,22 @@ export function hasRemainingSlices(possibleSlices: PizzaSlice[], edges: Edge[], 
     }
   }
 
+  // Build a set of blocked edge IDs (crossing diagonal is claimed)
+  const blockedEdges = new Set<string>();
+  for (const edge of edges) {
+    if (edge.claimedBy !== null) {
+      const crossingId = getCrossingDiagonal(edge.id, edges);
+      if (crossingId) blockedEdges.add(crossingId);
+    }
+  }
+
   return possibleSlices.some(slice => {
     if (slice.capturedBy !== null) return false;
 
-    // At least one edge must be unclaimed AND not sealed
+    // At least one edge must be unclaimed, not sealed, and not blocked by crossing diagonal
     return slice.edgeIds.some(edgeId => {
       const edge = edges.find(e => e.id === edgeId);
-      return edge && edge.claimedBy === null && !sealedEdges.has(edgeId);
+      return edge && edge.claimedBy === null && !sealedEdges.has(edgeId) && !blockedEdges.has(edgeId);
     });
   });
 }

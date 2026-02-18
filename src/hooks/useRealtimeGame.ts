@@ -18,6 +18,7 @@ import {
   createGrid,
   generateAllPossibleEdges,
   findAllPossibleSlices,
+  getCrossingDiagonal,
 } from '@/lib/gridUtils';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { mpDebugger as debug } from '@/lib/debug';
@@ -727,6 +728,16 @@ export function useRealtimeGame(
       slice => slice.edgeIds.includes(edgeId)
     );
     if (isSealed) return false;
+
+    // Block diagonal edges whose crossing diagonal is already claimed.
+    // In each grid cell, \ and / diagonals visually cross — only one can be drawn.
+    const crossingId = getCrossingDiagonal(edgeId, gameState.edges);
+    if (crossingId) {
+      const crossingEdge = gameState.edges.find(e => e.id === crossingId);
+      if (crossingEdge && (crossingEdge.claimedBy !== null || optimisticEdges.has(crossingId))) {
+        return false;
+      }
+    }
 
     return true;
   }, [gameState, isMyTurn, optimisticEdges]);

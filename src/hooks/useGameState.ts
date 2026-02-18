@@ -21,6 +21,7 @@ import {
   determineWinner,
   hasRemainingSlices,
   countAvailableMoves,
+  getCrossingDiagonal,
 } from '@/lib/gridUtils';
 
 interface UseGameStateReturn {
@@ -119,7 +120,22 @@ export function useGameState(): UseGameStateReturn {
       if (gameState.movesRemaining <= 0) return false;
 
       const edge = gameState.edges.find(e => e.id === edgeId);
-      return edge !== undefined && edge.claimedBy === null;
+      if (!edge || edge.claimedBy !== null) return false;
+
+      // Block edges sealed by captured slices
+      const isSealed = gameState.capturedSlices.some(
+        slice => slice.edgeIds.includes(edgeId)
+      );
+      if (isSealed) return false;
+
+      // Block diagonals whose crossing diagonal is already claimed
+      const crossingId = getCrossingDiagonal(edgeId, gameState.edges);
+      if (crossingId) {
+        const crossingEdge = gameState.edges.find(e => e.id === crossingId);
+        if (crossingEdge && crossingEdge.claimedBy !== null) return false;
+      }
+
+      return true;
     },
     [gameState]
   );

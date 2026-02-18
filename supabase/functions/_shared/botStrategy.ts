@@ -7,7 +7,7 @@
  * 3. When forced to set up, minimize chain length for opponent
  */
 
-import { Edge, PizzaSlice, EdgeID } from './gridUtils.ts';
+import { Edge, PizzaSlice, EdgeID, getCrossingDiagonal } from './gridUtils.ts';
 
 /**
  * Choose the best edge to claim using strategic scoring.
@@ -29,7 +29,17 @@ export function chooseBestEdge(
     }
   }
 
-  const availableEdges = edges.filter(e => e.claimedBy === null && !sealedEdges.has(e.id));
+  const availableEdges = edges.filter(e => {
+    if (e.claimedBy !== null) return false;
+    if (sealedEdges.has(e.id)) return false;
+    // Block diagonals whose crossing diagonal is already claimed
+    const crossingId = getCrossingDiagonal(e.id, edges);
+    if (crossingId) {
+      const crossingEdge = edges.find(ce => ce.id === crossingId);
+      if (crossingEdge && crossingEdge.claimedBy !== null) return false;
+    }
+    return true;
+  });
   if (availableEdges.length === 0) return null;
 
   let bestEdgeId: EdgeID | null = null;

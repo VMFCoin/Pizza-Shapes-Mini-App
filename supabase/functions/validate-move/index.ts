@@ -7,6 +7,7 @@ import {
   countAvailableMoves,
   hasRemainingSlices,
   determineWinner,
+  getCrossingDiagonal,
 } from '../_shared/gridUtils.ts';
 import { chooseBestEdge } from '../_shared/botStrategy.ts';
 
@@ -358,6 +359,16 @@ async function handleDrawEdge(
   );
   if (isPartOfCapturedSlice) {
     throw new Error('Edge is part of a completed pizza slice');
+  }
+
+  // Block diagonal edges whose crossing diagonal is already claimed.
+  // In each grid cell, \ and / diagonals visually cross — only one can be drawn.
+  const crossingId = getCrossingDiagonal(edgeId, edges);
+  if (crossingId) {
+    const crossingEdge = edges.find((e: Edge) => e.id === crossingId);
+    if (crossingEdge && crossingEdge.claimedBy !== null) {
+      throw new Error('Crossing diagonal already claimed');
+    }
   }
 
   // Validate moves remaining
