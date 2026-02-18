@@ -48,8 +48,8 @@ class MultiplayerDebugger {
       if (filterStr) {
         this.filter = new Set(filterStr.split(',').map(s => s.trim() as DebugCategory));
       } else if (!explicitlyDisabled) {
-        // Default filter: focus on game flow
-        this.filter = new Set(['game', 'timer', 'bot', 'realtime'] as DebugCategory[]);
+        // Default filter: all important categories for debugging
+        this.filter = new Set(['matchmaking', 'game', 'timer', 'bot', 'realtime', 'edge-fn'] as DebugCategory[]);
       }
     }
   }

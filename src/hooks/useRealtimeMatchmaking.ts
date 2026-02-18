@@ -168,6 +168,19 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       const fid = currentPlayerRef.current.fid;
       debug.info('matchmaking', 'Requesting server matchmaking:', { tier, playerFid: fid });
 
+      // Explicitly check if supabase client is initialized
+      if (!isSupabaseAvailable()) {
+        debug.error('matchmaking', 'Supabase client not available', { hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL, hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY });
+        matchmakingInFlightRef.current = false;
+        return;
+      }
+
+      debug.info('matchmaking', 'Calling create-match edge function', {
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        anonKeyPrefix: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20),
+      });
+
       const { data, error: invokeError } = await supabase.functions.invoke('create-match', {
         body: { tier, playerFid: fid },
       });
