@@ -16,6 +16,7 @@ import {
 import { useWallet, useFarcaster } from '@/hooks';
 import { useRealtimeGame } from '@/hooks/useRealtimeGame';
 import { ENTRY_TIERS } from '@/types';
+import { mpDebugger as debug } from '@/lib/debug';
 
 function GameContent() {
   const router = useRouter();
@@ -78,6 +79,24 @@ function GameContent() {
     gameState.turnNumber === 1 &&
     showInitialRolls;
 
+  // Log game page load
+  useEffect(() => {
+    debug.info('game', 'Game page loaded', { matchId, tier, fid: context?.fid });
+  }, [matchId, tier, context?.fid]);
+
+  // Log when game state first arrives
+  useEffect(() => {
+    if (gameState && !isLoading) {
+      debug.info('game', 'Game state ready', {
+        players: gameState.players.map(p => `${p.displayName} (fid=${p.fid}, roll=${p.initialRoll})`),
+        turnNumber: gameState.turnNumber,
+        currentPlayerIndex: gameState.currentPlayerIndex,
+        shouldShowInitialRolls: !!shouldShowInitialRolls,
+        hasSeenInitialRolls,
+      });
+    }
+  }, [gameState?.players.length, isLoading]);
+
   // Skip initial roll display if no roll data available (e.g., rejoining a game, turn > 1)
   // This ensures the turn timer starts immediately for games without initial rolls.
   useEffect(() => {
@@ -88,13 +107,22 @@ function GameContent() {
       gameState.players.every(p => p.initialRoll !== undefined && p.initialRoll !== null);
 
     if (!hasRollData || gameState.turnNumber !== 1) {
+      debug.info('game', 'Skipping initial roll display (no data or past turn 1)');
       setHasSeenInitialRolls(true);
     }
   }, [hasSeenInitialRolls, gameState, isLoading]);
 
+  // Log when gameReady flips (timer starts)
+  useEffect(() => {
+    if (hasSeenInitialRolls) {
+      debug.success('game', 'Game ready — turn timer can start');
+    }
+  }, [hasSeenInitialRolls]);
+
   // Navigate to game over when game ends
   useEffect(() => {
     if (isGameOver) {
+      debug.info('game', 'Game over — navigating in 2s', { winner: winner?.displayName });
       const timer = setTimeout(() => {
         const winnerParam = winner ? `&winner=${winner.id}` : '';
         router.push(`/game-over?matchId=${matchId}${winnerParam}`);
@@ -256,6 +284,7 @@ function GameContent() {
         <InitialRollDisplay
           players={gameState.players}
           onComplete={() => {
+            debug.info('game', 'Initial roll display completed — starting game');
             setShowInitialRolls(false);
             setHasSeenInitialRolls(true);
           }}
