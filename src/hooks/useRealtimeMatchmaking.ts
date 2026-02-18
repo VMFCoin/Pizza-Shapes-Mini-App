@@ -55,6 +55,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
   const previousPlayerCountRef = useRef<number>(0);
   const isJoiningRef = useRef(false);
   const matchmakingInFlightRef = useRef(false);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep currentPlayer ref updated
   useEffect(() => {
@@ -309,6 +310,12 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
           setConnectionStatus('connected');
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           setConnectionStatus('disconnected');
+          // Auto-reconnect after 2s
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            debug.info('matchmaking', 'Attempting queue channel reconnect...');
+            subscribeToQueue(tier);
+          }, 2000);
         }
       });
 
@@ -406,6 +413,10 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       setIsInQueue(false);
       setQueuePlayers([]);
       setMatchId(undefined);
@@ -440,6 +451,9 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
       }
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
       }
     };
   }, []);

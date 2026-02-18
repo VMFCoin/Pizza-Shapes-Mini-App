@@ -28,7 +28,7 @@ function getSupabaseClient(): SupabaseClient<Database> | null {
   supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     realtime: {
       params: {
-        eventsPerSecond: 10,
+        eventsPerSecond: 30,
       },
     },
   });
@@ -202,6 +202,8 @@ export type Database = {
           joined_at: string;
           status: 'waiting' | 'matched' | 'cancelled';
           match_id: string | null;
+          is_ready: boolean;
+          last_heartbeat: string;
         };
         Insert: {
           id?: string;
@@ -210,11 +212,15 @@ export type Database = {
           joined_at?: string;
           status?: 'waiting' | 'matched' | 'cancelled';
           match_id?: string | null;
+          is_ready?: boolean;
+          last_heartbeat?: string;
         };
         Update: {
           tier?: number;
           status?: 'waiting' | 'matched' | 'cancelled';
           match_id?: string | null;
+          is_ready?: boolean;
+          last_heartbeat?: string;
         };
       };
       move_history: {

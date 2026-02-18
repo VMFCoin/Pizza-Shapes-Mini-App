@@ -340,6 +340,12 @@ export function useRealtimeGame(
           setConnectionStatus('connected');
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           setConnectionStatus('disconnected');
+          // Auto-reconnect after 2s
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            debug.info('realtime', 'Attempting game channel reconnect...');
+            subscribeToGame();
+          }, 2000);
         }
       });
 
