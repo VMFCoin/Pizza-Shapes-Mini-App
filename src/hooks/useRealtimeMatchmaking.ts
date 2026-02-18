@@ -29,7 +29,7 @@ interface UseRealtimeMatchmakingReturn {
   markPlayerReady: () => Promise<void>;
 }
 
-const COUNTDOWN_SECONDS = 10;
+const COUNTDOWN_SECONDS = 5;
 const MIN_PLAYERS_TO_START = 2;
 // Queue entries older than 5 minutes are considered stale
 const STALE_ENTRY_MS = 5 * 60 * 1000;

@@ -19,13 +19,13 @@ export function InitialRollDisplay({ players, onComplete }: InitialRollDisplayPr
   const winner = sortedPlayers[0];
 
   useEffect(() => {
-    // Sequence: wait 500ms → show rolls → wait 2s → highlight winner → wait 1.5s → complete
-    const showTimer = setTimeout(() => setShowRolls(true), 500);
-    const highlightTimer = setTimeout(() => setHighlightWinner(true), 2500);
+    // Sequence: wait 300ms → show rolls → wait 1.2s → highlight winner → wait 1.5s → complete
+    const showTimer = setTimeout(() => setShowRolls(true), 300);
+    const highlightTimer = setTimeout(() => setHighlightWinner(true), 1500);
     const completeTimer = setTimeout(() => {
-      console.log('[InitialRollDisplay] Auto-completing after 4s');
+      console.log('[InitialRollDisplay] Auto-completing after 3s');
       onComplete();
-    }, 4000);
+    }, 3000);
 
     return () => {
       clearTimeout(showTimer);
