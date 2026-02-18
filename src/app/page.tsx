@@ -112,7 +112,7 @@ export default function HomePage() {
                     />
                   ))}
                 </div>
-                <span className="text-xl font-bold text-game-light">2-6</span>
+                <span className="text-xl font-bold text-game-light">2-8</span>
                 <span className="text-xs text-stone-400">Players</span>
               </div>
               <div className="flex flex-col items-center gap-2">
