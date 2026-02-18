@@ -521,9 +521,19 @@ async function executeBotTurn(
   const botPlayerId = `player_${botFid}`;
   console.log(`[bot-inline] Starting bot turn for FID=${botFid}, index=${botPlayerIndex}, turn=${currentTurnNumber}`);
 
-  let edges = gameState.edges as Edge[];
-  let possibleSlices = gameState.possible_slices as PizzaSlice[];
-  let capturedSlices = gameState.captured_slices as PizzaSlice[];
+  // Re-fetch fresh game state — the passed gameState may be stale
+  // (e.g., human's draw_edge captured slices that aren't reflected in the initial fetch)
+  const { data: freshState, error: freshError } = await supabase
+    .from('game_states')
+    .select('*')
+    .eq('match_id', matchId)
+    .single();
+
+  const effectiveState = (freshState && !freshError) ? freshState : gameState;
+
+  let edges = effectiveState.edges as Edge[];
+  let possibleSlices = effectiveState.possible_slices as PizzaSlice[];
+  let capturedSlices = effectiveState.captured_slices as PizzaSlice[];
   const availableMoves = countAvailableMoves(edges);
 
   // Check if game should end (no remaining slices)

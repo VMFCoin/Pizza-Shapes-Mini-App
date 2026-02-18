@@ -270,7 +270,7 @@ export function useRealtimeMatchmaking(currentPlayer: Player | null): UseRealtim
     setConnectionStatus('connecting');
 
     const channel = supabase
-      .channel(`queue-tier-${tier}-${Date.now()}`)
+      .channel(`queue-tier-${tier}`)
       .on(
         'postgres_changes',
         {

@@ -304,7 +304,7 @@ export function useRealtimeGame(
 
     // Subscribe to game state and match changes
     const gameChannel = supabase
-      .channel(`game-${matchId}-${Date.now()}`)
+      .channel(`game-${matchId}`)
       .on(
         'postgres_changes',
         {
@@ -498,7 +498,7 @@ export function useRealtimeGame(
           matchId,
           playerFid: currentPlayerFid,
           moveType: 'draw_edge',
-          moveData: edgeId,
+          moveData: { edgeId },
         },
       });
 
@@ -917,7 +917,7 @@ export function useRealtimeGame(
       debug.info('bot', 'botEffect: Calling trigger-bot-turn (fallback)...');
       try {
         const { data, error } = await supabase.functions.invoke('trigger-bot-turn', {
-          body: matchId,
+          body: { matchId },
         });
         debug.info('bot', 'botEffect: trigger-bot-turn result', { data: JSON.stringify(data), error: error });
       } catch (err) {
